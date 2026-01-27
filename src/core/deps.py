@@ -43,19 +43,20 @@ def verify_supabase_token(token: str) -> dict:
     Returns:
         {"id": "supabase-user-id", "email": "user@example.com"}
     """
+    # 단순 모드: 매 요청마다 Supabase Auth API로 토큰 검증 + 사용자 조회
     try:
         client = get_supabase_client()
         response = client.auth.get_user(token)
-
-        if response.user is None:
-            raise TokenInvalidError("유효하지 않은 토큰이에요")
-
-        return {
-            "id": response.user.id,
-            "email": response.user.email,
-        }
     except Exception as e:
         raise TokenInvalidError("유효하지 않은 토큰이에요") from e
+
+    if response.user is None:
+        raise TokenInvalidError("유효하지 않은 토큰이에요")
+
+    return {
+        "id": response.user.id,
+        "email": response.user.email,
+    }
 
 
 def get_current_supabase_user_id(
