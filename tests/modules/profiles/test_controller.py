@@ -16,7 +16,6 @@ SPEC 기반 테스트 케이스:
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
@@ -205,10 +204,10 @@ class TestProfileImage:
     ) -> None:
         """TC-U-005: 프로필 이미지 업로드 URL 발급 성공"""
         with patch("src.modules.profiles.service.get_storage_provider") as mock_storage:
-            mock_storage.return_value.create_presigned_upload_url.return_value = {
-                "upload_url": "https://storage.supabase.co/presigned-url",
-                "public_url": "https://storage.supabase.co/public/profile.jpg",
-            }
+            # get_upload_url 반환값 설정
+            mock_storage.return_value.get_upload_url.return_value = (
+                "https://storage.supabase.co/presigned-url"
+            )
 
             response = auth_client.post(
                 "/users/me/profile-image",

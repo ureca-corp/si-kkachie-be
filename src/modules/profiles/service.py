@@ -88,15 +88,12 @@ def create_profile_image_upload_url(
 
     # 실제 스토리지 사용
     path = f"profiles/{profile.id}/{request.file_name}"
-    result = storage.create_presigned_upload_url(
-        path=path,
-        content_type=request.content_type,
-        expires_in=3600,
-    )
+    upload_url = storage.get_upload_url(key=path, expires_in=3600)
+    public_url = f"{path}"  # 스토리지 provider에서 base URL 추가됨
 
     return {
-        "upload_url": result["upload_url"],
-        "public_url": result["public_url"],
+        "upload_url": upload_url,
+        "public_url": public_url,
         "expires_in": 3600,
     }
 
