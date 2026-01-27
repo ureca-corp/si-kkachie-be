@@ -1,0 +1,54 @@
+# Lint 검증 규칙
+
+validation:
+  # 파일 생성/수정 시
+  on_file_created:
+    levels: [0, 1, 2, 3]  # Syntax, Style, Type, Guidelines
+    auto_fix: true
+    fail_fast: true       # 첫 오류에서 중단
+  
+  on_file_modified:
+    levels: [0, 1, 2, 3]
+    auto_fix: true
+    fail_fast: true
+  
+  # Phase 완료 시
+  on_phase_complete:
+    levels: [0, 1, 2, 3, 4]  # Tests 포함
+    auto_fix: true
+    fail_fast: false      # 모든 오류 수집
+
+# Level 3: Guidelines 상세 규칙
+guidelines:
+  no_string_magic:
+    enabled: true
+    patterns:
+      - 'status\s*=\s*["\']SUCCESS["\']'
+      - 'status\s*=\s*["\']ERROR["\']'
+      - 'status\s*=\s*["\']FAILURE["\']'
+    suggestion: "Use Status.SUCCESS instead of string literal"
+  
+  korean_messages:
+    enabled: true
+    fields: ['message']
+    pattern: '[가-힣]+'
+    min_length: 3
+    suggestion: "Use user-friendly Korean message"
+  
+  function_args_newline:
+    enabled: true
+    threshold: 3
+    suggestion: "Use newline for 3+ arguments"
+
+# 제외 패턴
+exclude:
+  - "**/__pycache__/**"
+  - "**/node_modules/**"
+  - "**/.venv/**"
+  - "**/migrations/**"
+  - "**/.pytest_cache/**"
+  - "**/.ruff_cache/**"
+
+# 성능
+performance:
+  timeout_per_file: 5  # 5초 이상 걸리면 중단

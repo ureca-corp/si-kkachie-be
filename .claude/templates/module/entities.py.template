@@ -1,0 +1,59 @@
+"""
+{DOMAIN} 도메인 - Request/Response 엔티티
+"""
+
+from datetime import datetime
+from typing import Optional
+from uuid import UUID
+
+from pydantic import BaseModel, EmailStr, Field
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Request 모델
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+class Create{DOMAIN_TITLE}Request(BaseModel):
+    """
+    {DOMAIN} 생성 요청
+    
+    SPEC.md의 API 명세 기반
+    """
+    
+    # Fields (SPEC.md의 Request body에서 추출)
+    # {REQUEST_FIELDS_PLACEHOLDER}
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                # {REQUEST_EXAMPLE_PLACEHOLDER}
+            }
+        }
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Response 모델
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+class {DOMAIN_TITLE}Response(BaseModel):
+    """
+    {DOMAIN} 응답
+    
+    SPEC.md의 Response 기반
+    """
+    
+    id: UUID
+    # Fields (SPEC.md의 Response data에서 추출)
+    # {RESPONSE_FIELDS_PLACEHOLDER}
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+# Template 사용법:
+# 1. {DOMAIN} → 도메인명 (users, orders)
+# 2. {DOMAIN_TITLE} → 타이틀 케이스 (User, Order)
+# 3. {REQUEST_FIELDS_PLACEHOLDER} → SPEC의 Request 필드
+# 4. {RESPONSE_FIELDS_PLACEHOLDER} → SPEC의 Response 필드
+# 5. {REQUEST_EXAMPLE_PLACEHOLDER} → SPEC의 Request 예시

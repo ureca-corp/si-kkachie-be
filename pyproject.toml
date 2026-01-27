@@ -1,0 +1,110 @@
+[project]
+name = "claude-code-python-fastapi-template"
+version = "0.1.0"
+description = "FastAPI AI-Native Template"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.18.1",
+    "fastapi>=0.128.0",
+    "httpx>=0.28.1",
+    "passlib[bcrypt]>=1.7.4",
+    "pydantic-settings>=2.12.0",
+    "python-jose[cryptography]>=3.5.0",
+    "python-multipart>=0.0.21",
+    "sqlmodel>=0.0.31",
+    "uvicorn>=0.40.0",
+]
+
+[dependency-groups]
+dev = [
+    "erdantic>=1.2.0",
+    "httpx>=0.28.1",
+    "pydeps>=3.0.2",
+    "pylint>=4.0.4",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "ty>=0.0.13",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "N",      # pep8-naming
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "SIM",    # flake8-simplify
+    "ARG",    # flake8-unused-arguments
+    "PTH",    # flake8-use-pathlib
+    "RUF",    # ruff-specific
+    "S",      # flake8-bandit (security)
+    "T20",    # flake8-print (no print)
+    "PL",     # pylint
+    "PERF",   # perflint
+    "FURB",   # refurb
+    "LOG",    # flake8-logging
+    "G",      # flake8-logging-format
+]
+ignore = [
+    "PLR0913",  # Too many arguments (FastAPI 의존성 주입)
+    "PLR2004",  # Magic value comparison (테스트에서 자주 사용)
+    "S101",     # assert 사용 (테스트에서 필수)
+    "ARG001",   # Unused function argument (FastAPI 의존성)
+    "ARG002",   # Unused method argument (인터페이스 구현)
+    "B008",     # Depends() in default (FastAPI 표준 패턴)
+    "PLW0603",  # global statement (싱글톤 패턴)
+    "PLC0415",  # import not at top (lazy import 패턴)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "S101",     # assert 허용
+    "S105",     # 하드코딩된 비밀번호 오탐 허용 (테스트 데이터)
+    "PLR2004",  # Magic value 허용
+    "ARG001",   # Unused argument 허용
+]
+"main.py" = [
+    "T201",     # print 허용 (템플릿 기본 코드)
+]
+"src/core/config.py" = [
+    "S105",     # 기본값 하드코딩 허용 (실제 비밀번호 아님)
+]
+"src/core/response.py" = [
+    "S105",     # Status enum 값 (비밀번호 아님)
+    "UP046",    # Generic[T] 사용 (Pydantic 호환성)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+
+[tool.ty.src]
+# 선택적 외부 패키지 파일 제외 (설치 안 된 경우 타입 에러 방지)
+exclude = [
+    "src/external/cache/redis_provider.py",
+    "src/external/cache/upstash_provider.py",
+    "src/external/storage/s3_provider.py",
+    "src/external/storage/r2_provider.py",
+    "src/external/storage/supabase_provider.py",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "strict"
+testpaths = ["tests"]
+filterwarnings = [
+    "error",  # 모든 warning을 에러로 처리
+    # passlib의 crypt deprecation (Python 3.13에서 제거 예정) - 라이브러리 이슈
+    "ignore:'crypt' is deprecated:DeprecationWarning:passlib",
+]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--strict-config",
+]

@@ -1,0 +1,68 @@
+"""
+{DOMAIN} 도메인 - 생성 API
+"""
+
+from fastapi import APIRouter, Depends
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+from src.core.database import get_session
+from src.core.response import ApiResponse, Status
+from ..entities import Create{DOMAIN_TITLE}Request, {DOMAIN_TITLE}Response
+from ..models import {DOMAIN_TITLE}
+from ..repository import {DOMAIN_TITLE}Repository
+
+router = APIRouter()
+
+
+@router.post(
+    "/{DOMAIN}",
+    response_model=ApiResponse[{DOMAIN_TITLE}Response],
+    status_code=201,
+)
+async def create_{DOMAIN}(
+    request: Create{DOMAIN_TITLE}Request,
+    session: AsyncSession = Depends(get_session),
+) -> ApiResponse[{DOMAIN_TITLE}Response]:
+    """
+    {DOMAIN} 생성
+    
+    SPEC.md 기반:
+    - Request: {REQUEST_SUMMARY}
+    - Response (201): SUCCESS
+    - Response (400): VALIDATION_ERROR
+    - Response (409): {DOMAIN_UPPER}_ALREADY_EXISTS
+    """
+    
+    repo = {DOMAIN_TITLE}Repository(session)
+    
+    # SPEC.md의 비즈니스 로직 구현
+    # {BUSINESS_LOGIC_PLACEHOLDER}
+    
+    # 예시 (SPEC 기반으로 교체):
+    # 1. 중복 검사
+    # existing = await repo.get_by_email(request.email)
+    # if existing:
+    #     return ApiResponse(
+    #         status=Status.USER_ALREADY_EXISTS,
+    #         message="이미 가입된 이메일이에요",
+    #         data=None,
+    #     )
+    
+    # 2. 생성
+    {DOMAIN} = {DOMAIN_TITLE}(**request.model_dump())
+    created = await repo.create({DOMAIN})
+    
+    return ApiResponse(
+        status=Status.SUCCESS,
+        message="{SUCCESS_MESSAGE}",  # SPEC에서 추출
+        data={DOMAIN_TITLE}Response.model_validate(created),
+    )
+
+
+# Template 사용법:
+# 1. {DOMAIN} → 도메인명
+# 2. {DOMAIN_TITLE} → 타이틀 케이스
+# 3. {DOMAIN_UPPER} → 대문자 (USER, ORDER)
+# 4. {REQUEST_SUMMARY} → SPEC의 Request 요약
+# 5. {SUCCESS_MESSAGE} → SPEC의 성공 메시지
+# 6. {BUSINESS_LOGIC_PLACEHOLDER} → SPEC의 비즈니스 로직

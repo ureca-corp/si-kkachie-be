@@ -1,0 +1,23 @@
+.venv
+__pycache__
+
+# Database
+*.db
+
+# Environment
+.env
+
+# pydeps 기본 출력 (실수 방지)
+*.svg
+!docs/diagrams/*.svg
+
+# pytest
+.pytest_cache/
+.coverage
+
+# IDE
+.idea/
+.vscode/
+
+# Firebase
+firebase-debug.log

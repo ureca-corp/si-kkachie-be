@@ -1,0 +1,43 @@
+"""
+{DOMAIN} 도메인 - SQLModel 테이블 정의
+"""
+
+from datetime import datetime
+from typing import Optional
+from uuid import UUID, uuid4
+
+from sqlmodel import Field, SQLModel
+
+
+class {DOMAIN_TITLE}(SQLModel, table=True):
+    """
+    {DOMAIN} 테이블
+    
+    SPEC.md의 테이블 스키마를 기반으로 자동 생성됨
+    """
+    
+    __tablename__ = "{DOMAIN}"
+    
+    # Primary Key
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    
+    # Fields (SPEC.md에서 추출)
+    # {FIELDS_PLACEHOLDER}
+    
+    # Timestamps
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column_kwargs={"onupdate": datetime.utcnow}
+    )
+
+
+# Template 사용법:
+# 1. {DOMAIN} → 도메인명 (예: users, orders)
+# 2. {DOMAIN_TITLE} → 타이틀 케이스 (예: User, Order)
+# 3. {FIELDS_PLACEHOLDER} → SPEC의 필드 정의로 교체
+#
+# 예시:
+# email: str = Field(max_length=255, unique=True)
+# password_hash: str = Field(max_length=255)
+# name: str = Field(max_length=50)

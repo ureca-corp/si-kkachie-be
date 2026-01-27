@@ -1,0 +1,57 @@
+"""
+{DOMAIN} 도메인 - 조회 API
+"""
+
+from uuid import UUID
+
+from fastapi import APIRouter, Depends
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+from src.core.database import get_session
+from src.core.response import ApiResponse, Status
+from ..entities import {DOMAIN_TITLE}Response
+from ..repository import {DOMAIN_TITLE}Repository
+
+router = APIRouter()
+
+
+@router.get(
+    "/{DOMAIN}/{{id}}",
+    response_model=ApiResponse[{DOMAIN_TITLE}Response],
+)
+async def get_{DOMAIN}(
+    id: UUID,
+    session: AsyncSession = Depends(get_session),
+) -> ApiResponse[{DOMAIN_TITLE}Response]:
+    """
+    {DOMAIN} 조회
+    
+    SPEC.md 기반:
+    - Response (200): SUCCESS
+    - Response (404): {DOMAIN_UPPER}_NOT_FOUND
+    """
+    
+    repo = {DOMAIN_TITLE}Repository(session)
+    
+    {DOMAIN} = await repo.get_by_id(id)
+    
+    if not {DOMAIN}:
+        return ApiResponse(
+            status=Status.{DOMAIN_UPPER}_NOT_FOUND,
+            message="{NOT_FOUND_MESSAGE}",  # SPEC에서 추출
+            data=None,
+        )
+    
+    return ApiResponse(
+        status=Status.SUCCESS,
+        message="{SUCCESS_MESSAGE}",  # SPEC에서 추출
+        data={DOMAIN_TITLE}Response.model_validate({DOMAIN}),
+    )
+
+
+# Template 사용법:
+# 1. {DOMAIN} → 도메인명
+# 2. {DOMAIN_TITLE} → 타이틀 케이스
+# 3. {DOMAIN_UPPER} → 대문자
+# 4. {SUCCESS_MESSAGE} → SPEC의 성공 메시지
+# 5. {NOT_FOUND_MESSAGE} → SPEC의 404 메시지
