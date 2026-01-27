@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     SUPABASE_URL: str = "http://localhost:54321"  # 로컬 개발용 기본값
     SUPABASE_KEY: str = "test-anon-key"  # 로컬 개발용 기본값
     SUPABASE_SERVICE_KEY: str | None = None  # 서비스 역할 키 (백엔드용)
+    # Supabase JWT (선택): 설정 시 네트워크 없이 로컬에서 토큰 서명 검증
+    # Project Settings -> API -> JWT secret
+    SUPABASE_JWT_SECRET: str | None = None
 
     # Storage
     STORAGE_BACKEND: str | None = None  # "s3" | "r2" | "supabase" | None
