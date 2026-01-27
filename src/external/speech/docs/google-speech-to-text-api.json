@@ -1,0 +1,191 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Google Cloud Speech-to-Text API",
+    "version": "1.0.0",
+    "description": "Google Cloud Speech-to-Text API for audio transcription (Korean/English)"
+  },
+  "servers": [
+    {
+      "url": "https://speech.googleapis.com/v1",
+      "description": "Google Cloud Speech-to-Text API v1"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "RecognitionConfig": {
+        "type": "object",
+        "properties": {
+          "encoding": {
+            "type": "string",
+            "enum": ["LINEAR16", "FLAC", "MULAW", "AMR", "AMR_WB", "OGG_OPUS", "WEBM_OPUS", "MP3"],
+            "description": "Audio encoding format"
+          },
+          "sample_rate_hertz": {
+            "type": "integer",
+            "minimum": 8000,
+            "maximum": 48000,
+            "description": "Sample rate in Hertz (8000-48000)"
+          },
+          "language_code": {
+            "type": "string",
+            "enum": ["ko-KR", "en-US"],
+            "description": "Language code for transcription"
+          },
+          "enable_automatic_punctuation": {
+            "type": "boolean",
+            "default": true
+          },
+          "model": {
+            "type": "string",
+            "enum": ["default", "command_and_search", "phone_call", "video", "latest_short", "latest_long"],
+            "default": "default"
+          }
+        },
+        "required": ["language_code"]
+      },
+      "RecognitionAudio": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "format": "byte",
+            "description": "Base64-encoded audio data"
+          },
+          "uri": {
+            "type": "string",
+            "description": "URI of audio file in Google Cloud Storage"
+          }
+        }
+      },
+      "SpeechRecognitionResult": {
+        "type": "object",
+        "properties": {
+          "alternatives": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "transcript": {
+                  "type": "string",
+                  "description": "Transcribed text"
+                },
+                "confidence": {
+                  "type": "number",
+                  "format": "float",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "words": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "word": {"type": "string"},
+                      "start_time": {"type": "string"},
+                      "end_time": {"type": "string"}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "x-python-sdk": {
+    "package": "google-cloud-speech",
+    "version": ">=2.0.0",
+    "installation": "uv add google-cloud-speech",
+    "initialization": {
+      "description": "Initialize Speech-to-Text client",
+      "code": "from google.cloud import speech\n\nclient = speech.SpeechClient()"
+    },
+    "methods": {
+      "recognize": {
+        "description": "Synchronous speech recognition (audio < 1 minute)",
+        "example": "from google.cloud import speech\nimport io\n\nclient = speech.SpeechClient()\n\n# Read audio file\nwith io.open('audio.wav', 'rb') as audio_file:\n    content = audio_file.read()\n\naudio = speech.RecognitionAudio(content=content)\nconfig = speech.RecognitionConfig(\n    encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,\n    sample_rate_hertz=16000,\n    language_code='ko-KR',\n    enable_automatic_punctuation=True\n)\n\nresponse = client.recognize(config=config, audio=audio)\n\nfor result in response.results:\n    print(result.alternatives[0].transcript)"
+      },
+      "long_running_recognize": {
+        "description": "Asynchronous speech recognition (audio > 1 minute)",
+        "example": "operation = client.long_running_recognize(config=config, audio=audio)\nresponse = operation.result(timeout=90)"
+      },
+      "streaming_recognize": {
+        "description": "Real-time streaming recognition",
+        "example": "# For real-time streaming recognition\nstreaming_config = speech.StreamingRecognitionConfig(\n    config=config,\n    interim_results=True\n)\n\nrequests = (speech.StreamingRecognizeRequest(audio_content=chunk) for chunk in audio_generator())\nresponses = client.streaming_recognize(streaming_config, requests)"
+      }
+    }
+  },
+  "x-supported-audio-formats": {
+    "recommended": [
+      {
+        "format": "LINEAR16",
+        "extension": ".wav",
+        "notes": "Best quality, lossless. Recommended for best results."
+      },
+      {
+        "format": "FLAC",
+        "extension": ".flac",
+        "notes": "Lossless compression, good for storage."
+      }
+    ],
+    "supported": [
+      {
+        "format": "MP3",
+        "extension": ".mp3",
+        "notes": "Lossy compression. Acceptable quality."
+      },
+      {
+        "format": "OGG_OPUS",
+        "extension": ".ogg",
+        "notes": "Good for web applications."
+      },
+      {
+        "format": "WEBM_OPUS",
+        "extension": ".webm",
+        "notes": "Common for browser recordings."
+      }
+    ],
+    "best_practices": {
+      "sample_rate": "16000 Hz or higher",
+      "channels": "Mono (single channel)",
+      "bit_depth": "16-bit"
+    }
+  },
+  "x-pricing": {
+    "free_tier": {
+      "minutes_per_month": 60,
+      "notes": "First 60 minutes per month are free"
+    },
+    "paid": {
+      "standard": {
+        "price_per_15_seconds": 0.006,
+        "currency": "USD",
+        "notes": "For audio over 60 minutes"
+      },
+      "enhanced": {
+        "price_per_15_seconds": 0.009,
+        "currency": "USD",
+        "notes": "For video and phone_call models"
+      }
+    }
+  },
+  "x-supported-languages": {
+    "korean": {
+      "code": "ko-KR",
+      "name": "Korean (South Korea)"
+    },
+    "english": {
+      "code": "en-US",
+      "name": "English (United States)"
+    }
+  },
+  "x-environment-variables": [
+    {
+      "name": "GOOGLE_APPLICATION_CREDENTIALS",
+      "description": "Path to service account JSON file",
+      "required": true
+    }
+  ]
+}

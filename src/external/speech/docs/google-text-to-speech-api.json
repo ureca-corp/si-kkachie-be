@@ -1,0 +1,201 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Google Cloud Text-to-Speech API",
+    "version": "1.0.0",
+    "description": "Google Cloud Text-to-Speech API for speech synthesis (Korean/English)"
+  },
+  "servers": [
+    {
+      "url": "https://texttospeech.googleapis.com/v1",
+      "description": "Google Cloud Text-to-Speech API v1"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "SynthesisInput": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Plain text input"
+          },
+          "ssml": {
+            "type": "string",
+            "description": "SSML input for advanced control"
+          }
+        }
+      },
+      "VoiceSelectionParams": {
+        "type": "object",
+        "properties": {
+          "language_code": {
+            "type": "string",
+            "enum": ["ko-KR", "en-US"],
+            "description": "Language code"
+          },
+          "name": {
+            "type": "string",
+            "description": "Voice name (e.g., ko-KR-Standard-A)"
+          },
+          "ssml_gender": {
+            "type": "string",
+            "enum": ["NEUTRAL", "MALE", "FEMALE"],
+            "description": "Voice gender"
+          }
+        },
+        "required": ["language_code"]
+      },
+      "AudioConfig": {
+        "type": "object",
+        "properties": {
+          "audio_encoding": {
+            "type": "string",
+            "enum": ["LINEAR16", "MP3", "OGG_OPUS", "MULAW", "ALAW"],
+            "description": "Output audio encoding"
+          },
+          "speaking_rate": {
+            "type": "number",
+            "minimum": 0.25,
+            "maximum": 4.0,
+            "default": 1.0,
+            "description": "Speaking rate (1.0 = normal speed)"
+          },
+          "pitch": {
+            "type": "number",
+            "minimum": -20.0,
+            "maximum": 20.0,
+            "default": 0.0,
+            "description": "Pitch adjustment in semitones"
+          },
+          "volume_gain_db": {
+            "type": "number",
+            "minimum": -96.0,
+            "maximum": 16.0,
+            "default": 0.0,
+            "description": "Volume gain in dB"
+          },
+          "sample_rate_hertz": {
+            "type": "integer",
+            "description": "Output sample rate (default varies by encoding)"
+          }
+        },
+        "required": ["audio_encoding"]
+      },
+      "SynthesizeSpeechResponse": {
+        "type": "object",
+        "properties": {
+          "audio_content": {
+            "type": "string",
+            "format": "byte",
+            "description": "Base64-encoded audio data"
+          }
+        }
+      }
+    }
+  },
+  "x-python-sdk": {
+    "package": "google-cloud-texttospeech",
+    "version": ">=2.0.0",
+    "installation": "uv add google-cloud-texttospeech",
+    "initialization": {
+      "description": "Initialize Text-to-Speech client",
+      "code": "from google.cloud import texttospeech\n\nclient = texttospeech.TextToSpeechClient()"
+    },
+    "methods": {
+      "synthesize_speech": {
+        "description": "Synthesize speech from text",
+        "example": "from google.cloud import texttospeech\n\nclient = texttospeech.TextToSpeechClient()\n\n# Set the text input\nsynthesis_input = texttospeech.SynthesisInput(text='안녕하세요, 반갑습니다.')\n\n# Build the voice request\nvoice = texttospeech.VoiceSelectionParams(\n    language_code='ko-KR',\n    ssml_gender=texttospeech.SsmlVoiceGender.FEMALE\n)\n\n# Select the audio format\naudio_config = texttospeech.AudioConfig(\n    audio_encoding=texttospeech.AudioEncoding.MP3\n)\n\n# Perform the synthesis\nresponse = client.synthesize_speech(\n    input=synthesis_input,\n    voice=voice,\n    audio_config=audio_config\n)\n\n# Save the audio\nwith open('output.mp3', 'wb') as out:\n    out.write(response.audio_content)"
+      },
+      "list_voices": {
+        "description": "List available voices for a language",
+        "example": "voices = client.list_voices(language_code='ko-KR')\nfor voice in voices.voices:\n    print(f'{voice.name}: {voice.ssml_gender.name}')"
+      }
+    }
+  },
+  "x-available-voices": {
+    "korean": {
+      "standard": [
+        {"name": "ko-KR-Standard-A", "gender": "FEMALE"},
+        {"name": "ko-KR-Standard-B", "gender": "FEMALE"},
+        {"name": "ko-KR-Standard-C", "gender": "MALE"},
+        {"name": "ko-KR-Standard-D", "gender": "MALE"}
+      ],
+      "wavenet": [
+        {"name": "ko-KR-Wavenet-A", "gender": "FEMALE"},
+        {"name": "ko-KR-Wavenet-B", "gender": "FEMALE"},
+        {"name": "ko-KR-Wavenet-C", "gender": "MALE"},
+        {"name": "ko-KR-Wavenet-D", "gender": "MALE"}
+      ],
+      "neural2": [
+        {"name": "ko-KR-Neural2-A", "gender": "FEMALE"},
+        {"name": "ko-KR-Neural2-B", "gender": "FEMALE"},
+        {"name": "ko-KR-Neural2-C", "gender": "MALE"}
+      ]
+    },
+    "english": {
+      "standard": [
+        {"name": "en-US-Standard-A", "gender": "MALE"},
+        {"name": "en-US-Standard-B", "gender": "MALE"},
+        {"name": "en-US-Standard-C", "gender": "FEMALE"},
+        {"name": "en-US-Standard-D", "gender": "MALE"},
+        {"name": "en-US-Standard-E", "gender": "FEMALE"}
+      ],
+      "wavenet": [
+        {"name": "en-US-Wavenet-A", "gender": "MALE"},
+        {"name": "en-US-Wavenet-B", "gender": "MALE"},
+        {"name": "en-US-Wavenet-C", "gender": "FEMALE"},
+        {"name": "en-US-Wavenet-D", "gender": "MALE"},
+        {"name": "en-US-Wavenet-E", "gender": "FEMALE"},
+        {"name": "en-US-Wavenet-F", "gender": "FEMALE"}
+      ]
+    }
+  },
+  "x-output-formats": {
+    "MP3": {
+      "mime_type": "audio/mpeg",
+      "notes": "Most compatible, smaller file size"
+    },
+    "LINEAR16": {
+      "mime_type": "audio/wav",
+      "notes": "Uncompressed, highest quality"
+    },
+    "OGG_OPUS": {
+      "mime_type": "audio/ogg",
+      "notes": "Good quality, smaller size, web-friendly"
+    }
+  },
+  "x-pricing": {
+    "free_tier": {
+      "standard": {
+        "characters_per_month": 4000000,
+        "notes": "4 million characters per month for standard voices"
+      },
+      "wavenet": {
+        "characters_per_month": 1000000,
+        "notes": "1 million characters per month for WaveNet voices"
+      }
+    },
+    "paid": {
+      "standard": {
+        "price_per_million_chars": 4,
+        "currency": "USD"
+      },
+      "wavenet": {
+        "price_per_million_chars": 16,
+        "currency": "USD"
+      },
+      "neural2": {
+        "price_per_million_chars": 16,
+        "currency": "USD"
+      }
+    }
+  },
+  "x-environment-variables": [
+    {
+      "name": "GOOGLE_APPLICATION_CREDENTIALS",
+      "description": "Path to service account JSON file",
+      "required": true
+    }
+  ]
+}
