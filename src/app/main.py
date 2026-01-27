@@ -1,3 +1,8 @@
+"""FastAPI 애플리케이션 메인
+
+Kkachie 백엔드 - 외국인 여행자를 위한 실시간 번역 및 미션 가이드 앱
+"""
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -5,7 +10,13 @@ from fastapi import FastAPI
 from src.core.config import settings
 from src.core.exceptions import register_error_handlers
 from src.modules.health.controller import router as health_router
-from src.modules.users.controller import router as users_router
+
+# 도메인 라우터
+from src.modules.missions.controller import router as missions_router
+from src.modules.phrases.controller import router as phrases_router
+from src.modules.profiles.controller import router as profiles_router
+from src.modules.routes.controller import router as routes_router
+from src.modules.translations.controller import router as translations_router
 
 
 @asynccontextmanager
@@ -29,4 +40,8 @@ register_error_handlers(app)
 
 # 라우터 등록
 app.include_router(health_router)
-app.include_router(users_router, prefix="/api")
+app.include_router(profiles_router)
+app.include_router(translations_router)
+app.include_router(missions_router)
+app.include_router(phrases_router)
+app.include_router(routes_router)

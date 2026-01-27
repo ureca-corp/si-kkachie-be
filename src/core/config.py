@@ -27,9 +27,10 @@ class Settings(BaseSettings):
     # Firebase (AUTH_BACKEND=firebase일 때만)
     FIREBASE_CREDENTIALS: str | None = None
 
-    # Supabase (AUTH_BACKEND=supabase일 때만)
-    SUPABASE_URL: str | None = None
-    SUPABASE_KEY: str | None = None
+    # Supabase (인증 + 스토리지)
+    SUPABASE_URL: str = "http://localhost:54321"  # 로컬 개발용 기본값
+    SUPABASE_KEY: str = "test-anon-key"  # 로컬 개발용 기본값
+    SUPABASE_SERVICE_KEY: str | None = None  # 서비스 역할 키 (백엔드용)
 
     # Storage
     STORAGE_BACKEND: str | None = None  # "s3" | "r2" | "supabase" | None
