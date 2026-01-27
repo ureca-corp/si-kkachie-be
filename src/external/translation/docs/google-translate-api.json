@@ -1,0 +1,165 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Google Cloud Translation API",
+    "version": "3.0.0",
+    "description": "Google Cloud Translation API v3 for text translation (Korean <-> English)"
+  },
+  "servers": [
+    {
+      "url": "https://translation.googleapis.com/v3",
+      "description": "Google Cloud Translation API v3"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "GoogleCloud": {
+        "type": "oauth2",
+        "description": "Google Cloud service account authentication"
+      }
+    },
+    "schemas": {
+      "TranslateTextRequest": {
+        "type": "object",
+        "properties": {
+          "contents": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The content of the input in string format"
+          },
+          "target_language_code": {
+            "type": "string",
+            "enum": ["ko", "en"],
+            "description": "Target language code (ISO-639-1)"
+          },
+          "source_language_code": {
+            "type": "string",
+            "enum": ["ko", "en"],
+            "description": "Source language code (optional, auto-detected if not provided)"
+          },
+          "mime_type": {
+            "type": "string",
+            "enum": ["text/plain", "text/html"],
+            "default": "text/plain"
+          }
+        },
+        "required": ["contents", "target_language_code"]
+      },
+      "TranslateTextResponse": {
+        "type": "object",
+        "properties": {
+          "translations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "translated_text": {
+                  "type": "string",
+                  "description": "Translated text"
+                },
+                "detected_language_code": {
+                  "type": "string",
+                  "description": "Detected source language (if not specified)"
+                }
+              }
+            }
+          }
+        }
+      },
+      "DetectLanguageRequest": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "Text to detect language"
+          }
+        },
+        "required": ["content"]
+      },
+      "DetectLanguageResponse": {
+        "type": "object",
+        "properties": {
+          "languages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "language_code": {
+                  "type": "string"
+                },
+                "confidence": {
+                  "type": "number",
+                  "format": "float",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "x-python-sdk": {
+    "package": "google-cloud-translate",
+    "version": ">=3.0.0",
+    "installation": "uv add google-cloud-translate",
+    "initialization": {
+      "description": "Initialize Translation client",
+      "code": "from google.cloud import translate_v3 as translate\n\nclient = translate.TranslationServiceClient()\nproject_id = 'your-project-id'\nlocation = 'global'\nparent = f'projects/{project_id}/locations/{location}'"
+    },
+    "methods": {
+      "translate_text": {
+        "description": "Translate text to target language",
+        "example": "response = client.translate_text(\n    parent=parent,\n    contents=['Hello, how are you?'],\n    target_language_code='ko',\n    source_language_code='en'\n)\n\nfor translation in response.translations:\n    print(translation.translated_text)"
+      },
+      "detect_language": {
+        "description": "Detect the language of text",
+        "example": "response = client.detect_language(\n    parent=parent,\n    content='안녕하세요'\n)\n\nfor language in response.languages:\n    print(f'{language.language_code}: {language.confidence}')"
+      }
+    }
+  },
+  "x-pricing": {
+    "free_tier": {
+      "characters_per_month": 500000,
+      "notes": "First 500,000 characters per month are free (applied as $10 credit)"
+    },
+    "paid": {
+      "nmt_translation": {
+        "price_per_million_chars": 20,
+        "currency": "USD"
+      },
+      "custom_model": {
+        "price_per_million_chars": "80-30 (tiered)",
+        "currency": "USD"
+      }
+    }
+  },
+  "x-supported-languages": {
+    "korean": {
+      "code": "ko",
+      "name": "Korean"
+    },
+    "english": {
+      "code": "en",
+      "name": "English"
+    }
+  },
+  "x-environment-variables": [
+    {
+      "name": "GOOGLE_APPLICATION_CREDENTIALS",
+      "description": "Path to service account JSON file",
+      "required": true
+    },
+    {
+      "name": "GOOGLE_CLOUD_PROJECT",
+      "description": "Google Cloud project ID",
+      "required": true
+    }
+  ],
+  "x-fastapi-integration": {
+    "service_example": "from google.cloud import translate_v3 as translate\nfrom pydantic import BaseModel\n\nclass TranslationService:\n    def __init__(self, project_id: str):\n        self.client = translate.TranslationServiceClient()\n        self.parent = f'projects/{project_id}/locations/global'\n    \n    async def translate(\n        self,\n        text: str,\n        target_lang: str,\n        source_lang: str | None = None\n    ) -> str:\n        response = self.client.translate_text(\n            parent=self.parent,\n            contents=[text],\n            target_language_code=target_lang,\n            source_language_code=source_lang\n        )\n        return response.translations[0].translated_text"
+  }
+}
