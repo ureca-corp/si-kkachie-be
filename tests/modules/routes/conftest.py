@@ -82,18 +82,16 @@ def route_search_too_many_waypoints_request() -> dict:
 
 @pytest.fixture
 def created_route_history(session: Session, test_profile: Profile) -> RouteHistory:
-    """DB에 저장된 경로 히스토리"""
-    # SQLite에서는 PostGIS를 사용할 수 없으므로
-    # 테스트에서는 좌표를 JSON으로 저장
+    """DB에 저장된 경로 히스토리 (PostGIS GEOGRAPHY 사용)"""
+    from src.modules.routes.models import make_point
+
     route = RouteHistory(
         id=uuid4(),
         profile_id=test_profile.id,
         start_name="서울역",
-        start_lat=37.5547,
-        start_lng=126.9706,
+        start_point=make_point(126.9706, 37.5547),  # lng, lat 순서
         end_name="강남역",
-        end_lat=37.4979,
-        end_lng=127.0276,
+        end_point=make_point(127.0276, 37.4979),  # lng, lat 순서
         waypoints=None,
         route_option=RouteOption.TRAOPTIMAL,
         total_distance_m=12500,

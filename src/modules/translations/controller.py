@@ -110,7 +110,8 @@ async def translate_voice(
             message="음성 번역이 완료됐어요",
             data=response_data,
         )
-    except Exception:
+    except (OSError, ValueError):
+        # 오디오 파일 검증 실패만 처리, 다른 예외는 전역 핸들러로 전파
         return JSONResponse(
             status_code=400,
             content={

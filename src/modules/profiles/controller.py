@@ -105,7 +105,8 @@ def get_me(
     """내 정보 조회"""
     # get_current_profile에서 이미 인증 처리됨, credentials는 항상 존재
     if credentials is None:
-        raise ValueError("인증 토큰이 필요해요")
+        from src.core.exceptions import UnauthorizedError
+        raise UnauthorizedError("인증 토큰이 필요해요")
 
     # email은 Supabase Auth에서 가져와야 함
     user_info = verify_supabase_token(credentials.credentials)
@@ -137,7 +138,8 @@ def update_me(
     """내 정보 수정"""
     # get_current_profile에서 이미 인증 처리됨, credentials는 항상 존재
     if credentials is None:
-        raise ValueError("인증 토큰이 필요해요")
+        from src.core.exceptions import UnauthorizedError
+        raise UnauthorizedError("인증 토큰이 필요해요")
 
     updated_profile = service.update_profile(session, profile, request)
 

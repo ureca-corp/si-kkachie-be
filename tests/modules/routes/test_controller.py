@@ -10,12 +10,9 @@ SPEC 기반 테스트 케이스:
 - TC-R-103: 경유지 초과
 """
 
-from unittest.mock import MagicMock, patch
-from uuid import uuid4
+from unittest.mock import patch
 
-import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session
 
 from src.modules.profiles.models import Profile
 from src.modules.routes.models import RouteHistory
@@ -120,7 +117,7 @@ class TestSearchRoute:
         test_profile: Profile,
         route_search_request: dict,
     ) -> None:
-        """TC-R-101: 경로 없음 -> 400"""
+        """TC-R-101: 경로 없음 -> 404"""
         with patch(
             "src.modules.routes.service.search_route_from_naver"
         ) as mock_naver:
@@ -128,9 +125,9 @@ class TestSearchRoute:
 
             response = auth_client.post("/routes/search", json=route_search_request)
 
-        assert response.status_code == 400
+        assert response.status_code == 404
         data = response.json()
-        assert data["status"] == "ERROR_ROUTE_NOT_FOUND"
+        assert data["status"] == "ROUTE_NOT_FOUND"
 
     def test_search_route_invalid_coordinates(
         self,

@@ -58,6 +58,8 @@ def use_phrase(
     session: Session = Depends(get_session),
 ) -> ApiResponse[PhraseUseResponse] | JSONResponse:
     """문장 사용 기록"""
+    from src.core.exceptions import NotFoundError
+
     try:
         phrase = service.use_phrase(session, phrase_id)
 
@@ -69,7 +71,7 @@ def use_phrase(
                 usage_count=phrase.usage_count,
             ),
         )
-    except Exception:
+    except NotFoundError:
         return JSONResponse(
             status_code=404,
             content={

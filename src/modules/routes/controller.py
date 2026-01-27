@@ -31,6 +31,8 @@ def search_route(
     session: Session = Depends(get_session),
 ) -> ApiResponse[RouteSearchResponse] | JSONResponse:
     """경로 검색"""
+    from src.core.exceptions import ExternalServiceError, RouteNotFoundError
+
     try:
         result = service.search_route(session, profile.id, request)
 
@@ -48,11 +50,11 @@ def search_route(
                 path=result["path"],
             ),
         )
-    except Exception:
+    except (RouteNotFoundError, ExternalServiceError):
         return JSONResponse(
-            status_code=400,
+            status_code=404,
             content={
-                "status": Status.ERROR_ROUTE_NOT_FOUND,
+                "status": Status.ROUTE_NOT_FOUND,
                 "message": "경로를 찾을 수 없어요",
                 "data": None,
             },

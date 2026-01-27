@@ -15,10 +15,9 @@ SPEC 기반 테스트 케이스:
 """
 
 from io import BytesIO
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 from uuid import uuid4
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
@@ -218,7 +217,8 @@ class TestVoiceTranslation:
         with patch(
             "src.modules.translations.service.speech_to_text"
         ) as mock_stt:
-            mock_stt.side_effect = Exception("Invalid audio format")
+            # ValueError는 오디오 검증 실패를 나타냄
+            mock_stt.side_effect = ValueError("Invalid audio format")
 
             response = auth_client.post(
                 "/translate/voice",

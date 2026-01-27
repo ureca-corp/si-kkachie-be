@@ -77,11 +77,13 @@ def get_mission(
     session: Session = Depends(get_session),
 ) -> ApiResponse[MissionDetailResponse] | JSONResponse:
     """미션 상세 조회"""
+    from src.core.exceptions import NotFoundError
+
     try:
         mission = service.get_mission_detail(
             session, mission_id, profile.id, lang=profile.preferred_language
         )
-    except Exception:
+    except NotFoundError:
         return JSONResponse(
             status_code=404,
             content={

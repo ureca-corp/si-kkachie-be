@@ -84,16 +84,16 @@ def search_route(
     except Exception as e:
         raise ExternalServiceError("경로를 찾을 수 없어요") from e
 
-    # 경로 기록 저장
+    # 경로 기록 저장 (PostGIS GEOGRAPHY 타입 사용)
+    from .models import make_point
+
     route_history = RouteHistory(
         id=uuid4(),
         profile_id=profile_id,
         start_name=request.start.name,
-        start_lat=request.start.lat,
-        start_lng=request.start.lng,
+        start_point=make_point(request.start.lng, request.start.lat),
         end_name=request.end.name,
-        end_lat=request.end.lat,
-        end_lng=request.end.lng,
+        end_point=make_point(request.end.lng, request.end.lat),
         waypoints=waypoints_data,
         route_option=request.option,
         total_distance_m=route_data["total_distance_m"],
