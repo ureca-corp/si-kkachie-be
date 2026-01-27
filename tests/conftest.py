@@ -1,10 +1,12 @@
 """테스트 공통 픽스처
 
-Supabase Auth 기반 테스트 환경:
+Supabase Local 기반 테스트 환경:
+- DATABASE_URL 환경변수로 PostgreSQL 또는 SQLite 선택
 - auth.users는 Supabase가 관리하므로 모킹
-- profiles 테이블만 실제 테스트
+- profiles 테이블은 실제 DB에서 테스트
 """
 
+import os
 from collections.abc import Generator
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
@@ -23,18 +25,47 @@ def _utcnow() -> datetime:
     return datetime.now(UTC)
 
 
-@pytest.fixture(name="session")
-def session_fixture() -> Generator[Session, None, None]:
-    """테스트용 인메모리 데이터베이스 세션"""
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    SQLModel.metadata.create_all(engine)
+# 테스트용 데이터베이스 URL 결정
+TEST_DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    "sqlite://",  # 기본값: 인메모리 SQLite
+)
 
-    with Session(engine) as session:
-        yield session
+# PostgreSQL 사용 여부
+_USE_POSTGRES = TEST_DATABASE_URL.startswith("postgresql")
+
+
+@pytest.fixture(name="engine", scope="session")
+def engine_fixture():
+    """테스트용 데이터베이스 엔진 (세션 범위)"""
+    if _USE_POSTGRES:
+        return create_engine(TEST_DATABASE_URL)
+    else:
+        return create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+
+
+@pytest.fixture(name="session")
+def session_fixture(engine) -> Generator[Session, None, None]:
+    """테스트용 데이터베이스 세션 (테스트별 격리)"""
+    if not _USE_POSTGRES:
+        # SQLite: 매 테스트마다 테이블 생성
+        SQLModel.metadata.create_all(engine)
+
+    # 트랜잭션 시작 (테스트 격리용)
+    connection = engine.connect()
+    transaction = connection.begin()
+    session = Session(bind=connection)
+
+    yield session
+
+    # 트랜잭션 롤백으로 테스트 데이터 정리
+    session.close()
+    transaction.rollback()
+    connection.close()
 
 
 @pytest.fixture(name="client")
@@ -108,3 +139,21 @@ def auth_client_fixture(
     """인증된 테스트 클라이언트 (Supabase Auth 모킹)"""
     client.headers.update(auth_headers)
     return client
+
+
+@pytest.fixture(name="update_profile_data")
+def update_profile_data_fixture() -> dict:
+    """프로필 수정 요청 데이터"""
+    return {
+        "display_name": "새 이름",
+        "preferred_language": "ko",
+    }
+
+
+@pytest.fixture(name="profile_image_request")
+def profile_image_request_fixture() -> dict:
+    """프로필 이미지 업로드 요청 데이터"""
+    return {
+        "file_name": "profile.jpg",
+        "content_type": "image/jpeg",
+    }
