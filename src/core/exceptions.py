@@ -8,7 +8,7 @@ def _format_validation_errors(errors: list) -> str:
     """Pydantic validation errors를 읽기 쉬운 메시지로 변환"""
     messages = []
     for error in errors:
-        loc = ".".join(str(l) for l in error["loc"] if l != "body")
+        loc = ".".join(str(part) for part in error["loc"] if part != "body")
         msg = error["msg"]
         messages.append(f"{loc}: {msg}")
     return " | ".join(messages)

@@ -1,3 +1,10 @@
+"""의존성 주입 (Supabase Auth 기반)
+
+Supabase Auth 사용:
+- RPC/RLS 절대 금지 - JWT 검증만 사용
+- supabase.auth.get_user(token)으로 토큰 검증
+"""
+
 from typing import Annotated
 from uuid import UUID
 
@@ -5,13 +12,20 @@ from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlmodel import Session, select
 
+from src.core.config import settings
 from src.core.database import get_session
 from src.core.exceptions import TokenInvalidError, UnauthorizedError
-from src.external.auth import get_auth_provider
-from src.modules.users.models import User
+from src.modules.profiles.models import Profile
 
 # JWT Bearer 토큰 스킴 (Authorization: Bearer <token>)
 bearer_scheme = HTTPBearer(auto_error=False)
+
+
+def get_supabase_client():
+    """Supabase 클라이언트 반환"""
+    from supabase import create_client
+
+    return create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
 
 def _extract_token(
@@ -23,62 +37,57 @@ def _extract_token(
     return credentials.credentials
 
 
-def get_current_user_id(
+def verify_supabase_token(token: str) -> dict:
+    """Supabase 토큰 검증 후 사용자 정보 반환
+
+    Returns:
+        {"id": "supabase-user-id", "email": "user@example.com"}
+    """
+    try:
+        client = get_supabase_client()
+        response = client.auth.get_user(token)
+
+        if response.user is None:
+            raise TokenInvalidError("유효하지 않은 토큰이에요")
+
+        return {
+            "id": response.user.id,
+            "email": response.user.email,
+        }
+    except Exception as e:
+        raise TokenInvalidError("유효하지 않은 토큰이에요") from e
+
+
+def get_current_supabase_user_id(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
 ) -> UUID:
-    """현재 인증된 사용자 ID 반환 (DB 조회 없음)"""
+    """현재 인증된 Supabase 사용자 ID 반환 (DB 조회 없음)"""
     token = _extract_token(credentials)
-    auth_provider = get_auth_provider()
-    payload = auth_provider.verify_token(token)
-
-    if payload is None:
-        raise TokenInvalidError()
-
-    user_id = payload.get("sub")
-    if user_id is None:
-        raise TokenInvalidError()
-
-    return UUID(user_id)
+    user_info = verify_supabase_token(token)
+    return UUID(user_info["id"])
 
 
-def get_current_user(
+def get_current_profile(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
     session: Annotated[Session, Depends(get_session)],
-) -> User:
-    """현재 인증된 사용자 반환"""
+) -> Profile:
+    """현재 인증된 사용자의 프로필 반환"""
     token = _extract_token(credentials)
-    auth_provider = get_auth_provider()
-    payload = auth_provider.verify_token(token)
+    user_info = verify_supabase_token(token)
+    supabase_user_id = UUID(user_info["id"])
 
-    if payload is None:
-        raise TokenInvalidError()
-
-    user_id = payload.get("sub")
-    if user_id is None:
-        raise TokenInvalidError()
-
-    # soft delete 된 사용자 제외
-    user = session.exec(
-        select(User).where(User.id == UUID(user_id), User.deleted_at.is_(None))
+    # profiles 테이블에서 프로필 조회
+    profile = session.exec(
+        select(Profile).where(Profile.user_id == supabase_user_id)
     ).first()
 
-    if user is None:
-        raise UnauthorizedError("사용자를 찾을 수 없어요")
+    if profile is None:
+        raise UnauthorizedError("프로필을 찾을 수 없어요")
 
-    return user
-
-
-def get_current_active_user(
-    current_user: Annotated[User, Depends(get_current_user)],
-) -> User:
-    """현재 활성화된 사용자 반환"""
-    if not current_user.is_active:
-        raise UnauthorizedError("비활성화된 계정이에요")
-    return current_user
+    return profile
 
 
 # 타입 별칭
-CurrentUserId = Annotated[UUID, Depends(get_current_user_id)]
-CurrentUser = Annotated[User, Depends(get_current_user)]
-CurrentActiveUser = Annotated[User, Depends(get_current_active_user)]
+CurrentSupabaseUserId = Annotated[UUID, Depends(get_current_supabase_user_id)]
+CurrentProfile = Annotated[Profile, Depends(get_current_profile)]
 DbSession = Annotated[Session, Depends(get_session)]
