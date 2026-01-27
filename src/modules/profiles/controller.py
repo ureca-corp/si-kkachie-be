@@ -37,7 +37,14 @@ router = APIRouter(tags=["auth", "users"])
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
-@router.post("/auth/verify-token", response_model=ApiResponse[ProfileResponse])
+@router.post(
+    "/auth/verify-token",
+    response_model=ApiResponse[ProfileResponse],
+    openapi_extra={
+        "x-pages": ["login", "signup", "splash"],
+        "x-agent-description": "토큰 검증 및 자동 회원가입. 앱 시작 시 또는 로그인/회원가입 플로우에서 Supabase Auth 토큰을 검증하고, 신규 사용자면 프로필을 자동 생성",
+    },
+)
 def verify_token(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
     session: Session = Depends(get_session),
@@ -97,7 +104,14 @@ def verify_token(
     )
 
 
-@router.get("/users/me", response_model=ApiResponse[ProfileResponse])
+@router.get(
+    "/users/me",
+    response_model=ApiResponse[ProfileResponse],
+    openapi_extra={
+        "x-pages": ["profile", "settings", "home"],
+        "x-agent-description": "현재 로그인한 사용자의 프로필 정보 조회. 프로필 페이지, 설정 페이지, 홈 화면 헤더에서 사용자 정보 표시할 때 사용",
+    },
+)
 def get_me(
     profile: Annotated[Profile, Depends(get_current_profile)],
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
@@ -128,7 +142,14 @@ def get_me(
     )
 
 
-@router.patch("/users/me", response_model=ApiResponse[ProfileResponse])
+@router.patch(
+    "/users/me",
+    response_model=ApiResponse[ProfileResponse],
+    openapi_extra={
+        "x-pages": ["settings", "profile-edit"],
+        "x-agent-description": "사용자 프로필 정보 수정. 설정 페이지에서 닉네임, 선호 언어 등을 변경할 때 사용",
+    },
+)
 def update_me(
     request: UpdateProfileRequest,
     profile: Annotated[Profile, Depends(get_current_profile)],
@@ -165,6 +186,10 @@ def update_me(
 @router.post(
     "/users/me/profile-image",
     response_model=ApiResponse[ProfileImageUploadResponse],
+    openapi_extra={
+        "x-pages": ["settings", "profile-edit"],
+        "x-agent-description": "프로필 이미지 업로드용 presigned URL 발급. 설정 페이지에서 프로필 사진 변경 시 사용. URL을 받아서 클라이언트에서 직접 스토리지에 업로드",
+    },
 )
 def create_profile_image_upload_url(
     request: ProfileImageUploadRequest,
@@ -180,7 +205,14 @@ def create_profile_image_upload_url(
     )
 
 
-@router.delete("/users/me", response_model=ApiResponse)
+@router.delete(
+    "/users/me",
+    response_model=ApiResponse,
+    openapi_extra={
+        "x-pages": ["settings", "account-delete"],
+        "x-agent-description": "회원 탈퇴 처리. 설정 페이지의 계정 삭제 기능에서 사용. 사용자의 모든 데이터가 삭제됨",
+    },
+)
 def delete_me(
     profile: Annotated[Profile, Depends(get_current_profile)],
     session: Session = Depends(get_session),

@@ -24,7 +24,14 @@ from .entities import (
 router = APIRouter(prefix="/routes", tags=["routes"])
 
 
-@router.post("/search", response_model=ApiResponse[RouteSearchResponse])
+@router.post(
+    "/search",
+    response_model=ApiResponse[RouteSearchResponse],
+    openapi_extra={
+        "x-pages": ["route-search", "mission-play"],
+        "x-agent-description": "경로 검색. 길찾기 페이지에서 출발지/도착지로 대중교통 경로를 검색할 때 사용. 외부 지도 API(TMAP 등) 연동",
+    },
+)
 def search_route(
     request: RouteSearchRequest,
     profile: CurrentProfile,
@@ -61,7 +68,14 @@ def search_route(
         )
 
 
-@router.get("/recent", response_model=ApiResponse[list[RouteHistoryResponse]])
+@router.get(
+    "/recent",
+    response_model=ApiResponse[list[RouteHistoryResponse]],
+    openapi_extra={
+        "x-pages": ["route-search", "home"],
+        "x-agent-description": "최근 검색 경로 목록 조회. 길찾기 페이지에서 최근 검색 기록을 보여주거나, 홈 화면에서 빠른 접근용으로 사용",
+    },
+)
 def get_recent_routes(
     profile: CurrentProfile,
     session: Session = Depends(get_session),

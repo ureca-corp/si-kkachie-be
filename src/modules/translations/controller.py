@@ -23,7 +23,14 @@ from .entities import TextTranslateRequest, TranslationListResponse, Translation
 router = APIRouter(tags=["translations"])
 
 
-@router.post("/translate/text", response_model=ApiResponse[TranslationResponse])
+@router.post(
+    "/translate/text",
+    response_model=ApiResponse[TranslationResponse],
+    openapi_extra={
+        "x-pages": ["translate", "mission-play"],
+        "x-agent-description": "텍스트 번역. 번역 페이지에서 텍스트 입력 번역이나, 미션 진행 중 텍스트 번역 시 사용. 번역 히스토리에 자동 저장",
+    },
+)
 def translate_text(
     request: TextTranslateRequest,
     profile: CurrentProfile,
@@ -54,7 +61,14 @@ def translate_text(
     )
 
 
-@router.post("/translate/voice", response_model=ApiResponse[TranslationResponse])
+@router.post(
+    "/translate/voice",
+    response_model=ApiResponse[TranslationResponse],
+    openapi_extra={
+        "x-pages": ["translate", "mission-play"],
+        "x-agent-description": "음성 번역. 번역 페이지에서 마이크로 녹음한 음성이나, 미션 진행 중 실시간 대화 번역 시 사용. STT → 번역 → TTS 파이프라인 처리",
+    },
+)
 async def translate_voice(
     profile: CurrentProfile,
     audio_file: UploadFile = File(...),
@@ -122,7 +136,14 @@ async def translate_voice(
         )
 
 
-@router.get("/translations", response_model=ApiResponse[TranslationListResponse])
+@router.get(
+    "/translations",
+    response_model=ApiResponse[TranslationListResponse],
+    openapi_extra={
+        "x-pages": ["translation-history"],
+        "x-agent-description": "번역 히스토리 조회. 번역 기록 페이지에서 과거 번역 내역을 페이지네이션으로 조회. 타입별, 미션별 필터링 가능",
+    },
+)
 def get_translations(
     profile: CurrentProfile,
     session: Session = Depends(get_session),
@@ -167,7 +188,14 @@ def get_translations(
     )
 
 
-@router.delete("/translations/{translation_id}", response_model=ApiResponse)
+@router.delete(
+    "/translations/{translation_id}",
+    response_model=ApiResponse,
+    openapi_extra={
+        "x-pages": ["translation-history"],
+        "x-agent-description": "번역 기록 삭제. 번역 히스토리 페이지에서 개별 번역 기록을 삭제할 때 사용",
+    },
+)
 def delete_translation(
     translation_id: UUID,
     profile: CurrentProfile,

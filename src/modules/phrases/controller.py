@@ -21,7 +21,14 @@ from .entities import PhraseResponse, PhraseUseResponse
 router = APIRouter(prefix="/phrases", tags=["phrases"])
 
 
-@router.get("", response_model=ApiResponse[list[PhraseResponse]])
+@router.get(
+    "",
+    response_model=ApiResponse[list[PhraseResponse]],
+    openapi_extra={
+        "x-pages": ["phrase-list", "mission-play", "translate"],
+        "x-agent-description": "추천 문장 목록 조회. 문장 추천 페이지나 미션 진행 중 상황별 추천 문장을 보여줄 때 사용. 카테고리별, 미션 단계별 필터링 가능",
+    },
+)
 def list_phrases(
     profile: CurrentProfile,
     session: Session = Depends(get_session),
@@ -51,7 +58,14 @@ def list_phrases(
     )
 
 
-@router.post("/{phrase_id}/use", response_model=ApiResponse[PhraseUseResponse])
+@router.post(
+    "/{phrase_id}/use",
+    response_model=ApiResponse[PhraseUseResponse],
+    openapi_extra={
+        "x-pages": ["mission-play", "translate"],
+        "x-agent-description": "추천 문장 사용 기록. 사용자가 추천 문장을 선택해서 번역하거나 음성으로 재생할 때 호출. 사용 횟수 통계에 반영",
+    },
+)
 def use_phrase(
     phrase_id: UUID,
     profile: CurrentProfile,

@@ -34,7 +34,14 @@ from .entities import (
 router = APIRouter(prefix="/missions", tags=["missions"])
 
 
-@router.get("", response_model=ApiResponse[list[MissionListItemResponse]])
+@router.get(
+    "",
+    response_model=ApiResponse[list[MissionListItemResponse]],
+    openapi_extra={
+        "x-pages": ["home", "mission-list"],
+        "x-agent-description": "미션 목록 조회. 홈 화면이나 미션 탭에서 사용 가능한 미션들을 보여줄 때 사용. 사용자의 진행 상태도 함께 반환",
+    },
+)
 def list_missions(
     profile: CurrentProfile,
     session: Session = Depends(get_session),
@@ -70,7 +77,14 @@ def list_missions(
     )
 
 
-@router.get("/{mission_id}", response_model=ApiResponse[MissionDetailResponse])
+@router.get(
+    "/{mission_id}",
+    response_model=ApiResponse[MissionDetailResponse],
+    openapi_extra={
+        "x-pages": ["mission-detail", "mission-play"],
+        "x-agent-description": "미션 상세 정보 조회. 미션 상세 페이지에서 미션의 모든 단계, 추천 문장 등 세부 정보를 표시할 때 사용",
+    },
+)
 def get_mission(
     mission_id: UUID,
     profile: CurrentProfile,
@@ -125,7 +139,14 @@ def get_mission(
     )
 
 
-@router.post("/{mission_id}/start", response_model=ApiResponse[MissionStartResponse])
+@router.post(
+    "/{mission_id}/start",
+    response_model=ApiResponse[MissionStartResponse],
+    openapi_extra={
+        "x-pages": ["mission-detail"],
+        "x-agent-description": "미션 시작. 미션 상세 페이지에서 '시작하기' 버튼 클릭 시 호출. 이미 진행 중인 미션이면 409 에러 반환",
+    },
+)
 def start_mission(
     mission_id: UUID,
     profile: CurrentProfile,
@@ -176,6 +197,10 @@ def start_mission(
 @router.patch(
     "/{mission_id}/progress",
     response_model=ApiResponse[MissionProgressUpdateResponse],
+    openapi_extra={
+        "x-pages": ["mission-play"],
+        "x-agent-description": "미션 단계 완료 처리. 미션 진행 페이지에서 각 단계를 완료할 때 호출. 다음 단계로 진행하거나 미션 완료 상태 업데이트",
+    },
 )
 def update_progress(
     mission_id: UUID,
@@ -205,7 +230,14 @@ def update_progress(
         )
 
 
-@router.post("/{mission_id}/end", response_model=ApiResponse[MissionEndResponse])
+@router.post(
+    "/{mission_id}/end",
+    response_model=ApiResponse[MissionEndResponse],
+    openapi_extra={
+        "x-pages": ["mission-play", "mission-complete"],
+        "x-agent-description": "미션 종료. 미션 진행 페이지에서 미션을 완료하거나 포기할 때 호출. 성공/실패 상태와 함께 피드백 저장 가능",
+    },
+)
 def end_mission(
     mission_id: UUID,
     request: EndMissionRequest,
