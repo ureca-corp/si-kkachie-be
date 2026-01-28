@@ -38,6 +38,8 @@ def calculate_distance(
         Geography,
     )
 
-    result = session.exec(select(func.ST_Distance(from_point, to_point)))  # type: ignore[call-overload]
-    distance = result.one_or_none()
+    # Use SQLAlchemy's scalar() for GeoAlchemy2 compatibility
+    # SQLModel's exec() has limited support for raw SQLAlchemy select with GeoAlchemy2 functions
+    stmt = select(func.ST_Distance(from_point, to_point))
+    distance = session.scalar(stmt)
     return int(distance) if distance else 0
