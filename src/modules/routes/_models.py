@@ -56,8 +56,8 @@ class RouteHistory(SQLModel, table=True):
     route_option: str = Field(default=RouteOption.TRAOPTIMAL.value)
     total_distance_m: int = Field()
     total_duration_s: int = Field()
-    # 경로 데이터 (JSON)
-    path_data: list[dict] = Field(sa_column=Column(JSON))
+    # 경로 데이터 (JSON) - [[lng, lat], ...] 형식 (네이버 API 원본)
+    path_data: list[list[float]] = Field(sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=_utcnow, index=True)
 
     @property

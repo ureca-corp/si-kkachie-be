@@ -68,7 +68,9 @@ class RouteSearchResponse(BaseModel):
     total_duration_s: int
     distance_text: str
     duration_text: str
-    path: list[dict]
+    path: list[list[float]] = Field(
+        description="경로 좌표 [[lng, lat], ...] - 경도, 위도 순서 (네이버 API 원본 형식)"
+    )
 
 
 # ─────────────────────────────────────────────────
@@ -91,14 +93,17 @@ def search_route_from_naver(
     """Naver Maps Directions API 호출
 
     TODO: 실제 구현
+
+    Returns:
+        path: [[lng, lat], ...] 형식 (네이버 API 원본 형식)
     """
-    # 임시 구현 (테스트용)
+    # 임시 구현 (테스트용) - 네이버 API 원본 형식 [[lng, lat], ...]
     return {
         "total_distance_m": 12500,
         "total_duration_s": 1800,
         "path": [
-            {"lat": start_lat, "lng": start_lng},
-            {"lat": end_lat, "lng": end_lng},
+            [start_lng, start_lat],  # [lng, lat] 순서
+            [end_lng, end_lat],
         ],
     }
 
