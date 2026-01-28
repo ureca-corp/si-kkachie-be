@@ -18,6 +18,19 @@ def create(session: Session, route: RouteHistory) -> RouteHistory:
     return route
 
 
+def get_by_id(
+    session: Session,
+    route_id: UUID,
+    profile_id: UUID,
+) -> RouteHistory | None:
+    """경로 상세 조회 (본인 소유만)"""
+    query = select(RouteHistory).where(
+        RouteHistory.id == route_id,
+        RouteHistory.profile_id == profile_id,
+    )
+    return session.exec(query).first()
+
+
 def get_by_profile_id(
     session: Session,
     profile_id: UUID,
