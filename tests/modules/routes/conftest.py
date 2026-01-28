@@ -7,7 +7,7 @@ import pytest
 from sqlmodel import Session
 
 from src.core.enums import RouteOption
-from src.modules.profiles.models import Profile
+from src.modules.profiles import Profile
 from src.modules.routes.models import RouteHistory
 
 

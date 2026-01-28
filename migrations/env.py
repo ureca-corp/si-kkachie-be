@@ -12,16 +12,16 @@ from sqlmodel import SQLModel, create_engine
 from src.core.config import settings
 
 # Import all models for autogenerate support
-from src.modules.missions.models import (  # noqa: F401
+from src.modules.missions._models import (  # noqa: F401
     MissionProgress,
     MissionStep,
     MissionStepProgress,
     MissionTemplate,
 )
-from src.modules.phrases.models import Phrase, PhraseStepMapping  # noqa: F401
-from src.modules.profiles.models import Profile  # noqa: F401
+from src.modules.phrases._models import Phrase, PhraseStepMapping  # noqa: F401
+from src.modules.profiles import Profile  # noqa: F401
 from src.modules.routes.models import RouteHistory  # noqa: F401
-from src.modules.translations.models import Translation  # noqa: F401
+from src.modules.translations import Translation  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

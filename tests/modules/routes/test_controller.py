@@ -14,7 +14,7 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from src.modules.profiles.models import Profile
+from src.modules.profiles import Profile
 from src.modules.routes.models import RouteHistory
 
 
@@ -29,7 +29,7 @@ class TestSearchRoute:
     ) -> None:
         """TC-R-001: 기본 경로 검색 성공"""
         with patch(
-            "src.modules.routes.service.search_route_from_naver"
+            "src.modules.routes.search.search_route_from_naver"
         ) as mock_naver:
             mock_naver.return_value = {
                 "total_distance_m": 12500,
@@ -64,7 +64,7 @@ class TestSearchRoute:
     ) -> None:
         """TC-R-002: 경유지 포함 검색 성공"""
         with patch(
-            "src.modules.routes.service.search_route_from_naver"
+            "src.modules.routes.search.search_route_from_naver"
         ) as mock_naver:
             mock_naver.return_value = {
                 "total_distance_m": 15000,
@@ -94,7 +94,7 @@ class TestSearchRoute:
         route_search_request["option"] = "trafast"  # 빠른길
 
         with patch(
-            "src.modules.routes.service.search_route_from_naver"
+            "src.modules.routes.search.search_route_from_naver"
         ) as mock_naver:
             mock_naver.return_value = {
                 "total_distance_m": 14000,  # 거리는 더 길지만
@@ -119,7 +119,7 @@ class TestSearchRoute:
     ) -> None:
         """TC-R-101: 경로 없음 -> 404"""
         with patch(
-            "src.modules.routes.service.search_route_from_naver"
+            "src.modules.routes.search.search_route_from_naver"
         ) as mock_naver:
             mock_naver.side_effect = Exception("Route not found")
 

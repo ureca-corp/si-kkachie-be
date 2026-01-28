@@ -3,70 +3,33 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     # App
-    APP_NAME: str = "Transit Guide API"
+    APP_NAME: str = "Kkachie API"
     DEBUG: bool = False
     VERSION: str = "0.1.0"
 
     # Database
     DATABASE_URL: str = "sqlite:///./app.db"
 
-    # Auth - 기본값 JWT
-    AUTH_BACKEND: str = "jwt"  # "jwt" | "firebase" | "supabase"
-    SECRET_KEY: str = "change-me-in-production"
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60  # 1시간
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 30  # 30일
+    # Supabase
+    SUPABASE_URL: str | None = None
+    SUPABASE_KEY: str | None = None  # anon key
+    SUPABASE_SERVICE_KEY: str | None = None  # 백엔드 전용
+    SUPABASE_JWKS_URL: str | None = None  # JWT 검증용
+    SUPABASE_STORAGE_BUCKET: str = "profiles"
 
-    # External API - TMAP
-    TMAP_APP_KEY: str | None = None
-
-    # External API - Naver Maps
+    # Naver Cloud Platform (Maps, Directions, Reverse Geocoding)
     NAVER_CLIENT_ID: str | None = None
     NAVER_CLIENT_SECRET: str | None = None
 
-    # Firebase (AUTH_BACKEND=firebase일 때만)
-    FIREBASE_CREDENTIALS: str | None = None
-
-    # Supabase (인증 + 스토리지)
-    SUPABASE_URL: str = "http://localhost:54321"  # 로컬 개발용 기본값
-    SUPABASE_KEY: str = "test-anon-key"  # 로컬 개발용 기본값
-    SUPABASE_SERVICE_KEY: str | None = None  # 서비스 역할 키 (백엔드용)
-    # Supabase JWT (선택): 설정 시 네트워크 없이 로컬에서 토큰 서명 검증
-    # Project Settings -> API -> JWT secret
-    SUPABASE_JWT_SECRET: str | None = None
-
-    # Storage
-    STORAGE_BACKEND: str | None = None  # "s3" | "r2" | "supabase" | None
-
-    # AWS S3
-    S3_BUCKET: str | None = None
-    S3_REGION: str | None = None
-    S3_ACCESS_KEY: str | None = None
-    S3_SECRET_KEY: str | None = None
-
-    # Cloudflare R2
-    R2_BUCKET: str | None = None
-    R2_ACCOUNT_ID: str | None = None
-    R2_ACCESS_KEY: str | None = None
-    R2_SECRET_KEY: str | None = None
-
-    # Supabase Storage
-    SUPABASE_STORAGE_BUCKET: str | None = None
-
-    # Cache
-    CACHE_BACKEND: str | None = None  # "redis" | "upstash" | None
-
-    # Redis
-    REDIS_URL: str | None = None  # redis://localhost:6379/0
-
-    # Upstash Redis
-    UPSTASH_REDIS_URL: str | None = None
-    UPSTASH_REDIS_TOKEN: str | None = None
+    # Naver Developers (Local Search API)
+    NAVER_SEARCH_CLIENT_ID: str | None = None
+    NAVER_SEARCH_CLIENT_SECRET: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
+        extra="ignore",  # .env에 있는 사용하지 않는 변수 무시
     )
 
 

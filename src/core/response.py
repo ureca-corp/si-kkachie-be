@@ -32,6 +32,7 @@ class Status(StrEnum):
 
     # 장소 관련
     PLACE_NOT_FOUND = "PLACE_NOT_FOUND"
+    LOCATION_NOT_FOUND = "LOCATION_NOT_FOUND"
 
     # 경로 관련
     ROUTE_NOT_FOUND = "ROUTE_NOT_FOUND"

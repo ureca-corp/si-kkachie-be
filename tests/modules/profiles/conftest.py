@@ -1,9 +1,6 @@
 """profiles 도메인 테스트 픽스처"""
 
 import pytest
-from sqlmodel import Session
-
-from src.modules.profiles.models import Profile
 
 
 @pytest.fixture
