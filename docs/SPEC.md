@@ -983,6 +983,48 @@ CREATE INDEX idx_route_history_end_point ON route_history USING GIST(end_point);
 }
 ```
 
+---
+
+#### GET /routes/{route_id} (경로 상세 조회)
+
+**Path Parameters:**
+- `route_id`: 경로 기록 UUID
+
+**Response (200):**
+```json
+{
+    "status": "SUCCESS",
+    "message": "경로 조회에 성공했어요",
+    "data": {
+        "id": "018d5c4f-xxxx-7xxx-xxxx-xxxxxxxxxxxx",
+        "start": {
+            "name": "서울역",
+            "lat": 37.5547,
+            "lng": 126.9706
+        },
+        "end": {
+            "name": "강남역",
+            "lat": 37.4979,
+            "lng": 127.0276
+        },
+        "total_distance_m": 12500,
+        "total_duration_s": 1800,
+        "distance_text": "12.5km",
+        "duration_text": "약 30분",
+        "path": [[126.9706, 37.5547], [126.98, 37.55], [127.0276, 37.4979]]
+    }
+}
+```
+
+**Error (404):**
+```json
+{
+    "status": "RESOURCE_NOT_FOUND",
+    "message": "경로 기록을 찾을 수 없어요",
+    "data": null
+}
+```
+
 ### 9.4 비즈니스 룰
 
 1. Naver Maps Directions API 응답에서 필요한 정보만 추출
@@ -998,9 +1040,11 @@ CREATE INDEX idx_route_history_end_point ON route_history USING GIST(end_point);
 | TC-R-002 | 경유지 포함 검색 | 출발지, 경유지, 도착지 | 200, 경로 정보 |
 | TC-R-003 | 옵션 변경 검색 | option: trafast | 200, 빠른길 경로 |
 | TC-R-004 | 최근 경로 조회 | - | 200, 히스토리 목록 |
+| TC-R-005 | 경로 상세 조회 | route_id | 200, 전체 경로 데이터 |
 | TC-R-101 | 경로 없음 | 도달 불가능한 좌표 | 400, ERROR_ROUTE_NOT_FOUND |
 | TC-R-102 | 잘못된 좌표 | lat: 200 (범위 초과) | 400, ERROR_VALIDATION |
 | TC-R-103 | 경유지 초과 | 6개 이상 경유지 | 400, ERROR_TOO_MANY_WAYPOINTS |
+| TC-R-104 | 존재하지 않는 경로 | 잘못된 route_id | 404, RESOURCE_NOT_FOUND |
 
 ---
 

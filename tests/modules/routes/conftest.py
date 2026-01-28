@@ -97,8 +97,9 @@ def created_route_history(session: Session, test_profile: Profile) -> RouteHisto
         total_distance_m=12500,
         total_duration_s=1800,
         path_data=[
-            {"lat": 37.5547, "lng": 126.9706},
-            {"lat": 37.4979, "lng": 127.0276},
+            [126.9706, 37.5547],
+            [126.9800, 37.5500],
+            [127.0276, 37.4979],
         ],
         created_at=_utcnow(),
     )
