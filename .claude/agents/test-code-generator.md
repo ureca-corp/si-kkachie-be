@@ -29,7 +29,7 @@ SPEC.md만 보고 테스트 코드 100% 생성 (소스 코드 없이!)
 
 ---
 
-## 출력
+## 출력 (Vertical Slice 테스트 구조)
 
 ```
 tests/
@@ -37,8 +37,8 @@ tests/
 └── modules/{domain}/
     ├── __init__.py
     ├── conftest.py                # 도메인 전용 픽스처
-    ├── test_controller.py         # 엔드포인트 테스트
-    └── test_service.py            # 비즈니스 로직 테스트 (선택)
+    ├── test_{feature1}.py         # 기능별 테스트
+    └── test_{feature2}.py         # 기능별 테스트
 ```
 
 ---
@@ -50,7 +50,7 @@ tests/
 ```
 SPEC.md 읽기
   ↓
-도메인 목록 추출: [users, orders, products, ...]
+도메인 목록 추출: [routes, translations, missions, ...]
   ↓
 각 도메인의 API 엔드포인트 파악
 ```
@@ -60,9 +60,9 @@ SPEC.md 읽기
 **도메인 2개 이상이면 반드시 병렬 실행!**
 
 ```
-Task("users 테스트 생성")    ← 동시
-Task("orders 테스트 생성")   ← 동시
-Task("products 테스트 생성") ← 동시
+Task("routes 테스트 생성")        ← 동시
+Task("translations 테스트 생성")  ← 동시
+Task("missions 테스트 생성")      ← 동시
 ```
 
 ### Step 3: 각 Task 내부 작업
@@ -71,8 +71,7 @@ Task("products 테스트 생성") ← 동시
 2. `tests/modules/{domain}/` 디렉토리 생성
 3. `__init__.py` 생성
 4. `conftest.py` 생성 (도메인 픽스처)
-5. `test_controller.py` 생성 (엔드포인트 테스트)
-6. (선택) `test_service.py` 생성 (비즈니스 로직 테스트)
+5. `test_{feature}.py` 생성 (기능별 테스트)
 
 ### Step 4: pytest 실행 (FAILED 확인)
 
@@ -89,36 +88,46 @@ uv run pytest tests/modules/ -v --tb=no
 
 ## 테스트 생성 규칙
 
-### test_controller.py 구조
+### test_{feature}.py 구조
 
 ```python
+"""routes 도메인 search 테스트
+
+SPEC 기반 테스트 케이스:
+- TC-R-001: 기본 경로 검색
+- TC-R-002: 경유지 포함 검색
+"""
+
+from unittest.mock import patch
+
 from fastapi.testclient import TestClient
-from sqlmodel import Session
 
-# 아직 없는 모듈 import (나중에 생성됨)
-from src.modules.{domain}.models import {Domain}
-
-
-def test_{action}_success(auth_client: TestClient, session: Session) -> None:
-    """정상 케이스"""
-    response = auth_client.post(
-        "/api/{domain}/",
-        json={...},
-    )
-    assert response.status_code == 200
-    # 상세 검증...
+from src.modules.profiles import Profile
+from src.modules.routes.models import RouteHistory
 
 
-def test_{action}_unauthorized(client: TestClient) -> None:
-    """인증 없음 → 401"""
-    response = client.post("/api/{domain}/", json={...})
-    assert response.status_code == 401
+class TestSearchRoute:
+    """POST /routes/search 테스트"""
 
+    def test_search_route_success(
+        self,
+        auth_client: TestClient,
+        test_profile: Profile,
+        route_search_request: dict,
+    ) -> None:
+        """TC-R-001: 기본 경로 검색 성공"""
+        with patch("src.modules.routes.search.search_route_from_naver") as mock:
+            mock.return_value = {...}
+            response = auth_client.post("/routes/search", json=route_search_request)
 
-def test_{action}_not_found(auth_client: TestClient) -> None:
-    """리소스 없음 → 404"""
-    response = auth_client.get("/api/{domain}/nonexistent-id")
-    assert response.status_code == 404
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "SUCCESS"
+
+    def test_search_route_unauthorized(self, client: TestClient) -> None:
+        """인증 없음 → 401"""
+        response = client.post("/routes/search", json={...})
+        assert response.status_code == 401
 ```
 
 ### 엔드포인트별 필수 테스트 케이스
@@ -135,7 +144,6 @@ def test_{action}_not_found(auth_client: TestClient) -> None:
 
 ```python
 import pytest
-from decimal import Decimal
 from sqlmodel import Session
 
 from src.modules.{domain}.models import {Domain}
@@ -151,10 +159,10 @@ def {domain}_data() -> dict:
 
 
 @pytest.fixture
-def created_{domain}(session: Session, test_user) -> {Domain}:
+def created_{domain}(session: Session, test_profile) -> {Domain}:
     """DB에 저장된 테스트용 {domain}"""
     {domain} = {Domain}(
-        user_id=test_user.id,
+        profile_id=test_profile.id,
         field1="value1",
         field2="value2",
     )
@@ -166,19 +174,34 @@ def created_{domain}(session: Session, test_user) -> {Domain}:
 
 ---
 
+## Mock 경로 주의
+
+**Vertical Slice 구조에서는 mock 경로가 feature 파일을 가리켜야 함!**
+
+```python
+# 기존 Layer-based (잘못된 예)
+with patch("src.modules.routes.service.search_route_from_naver") as mock:
+
+# Vertical Slice (올바른 예)
+with patch("src.modules.routes.search.search_route_from_naver") as mock:
+```
+
+---
+
 ## 제약 조건
 
 1. **소스 코드 참조 금지** - 아직 존재하지 않음
 2. **SPEC만으로 테스트 작성** - SPEC이 진실의 원천
 3. **Import는 예상 경로로** - 나중에 logic-code-generator가 맞춤
 4. **테스트가 PASSED면 안 됨** - 구현 전이므로 반드시 실패해야 함
+5. **기능별 파일 분리** - test_{feature}.py 형식
 
 ---
 
 ## 완료 조건
 
 - [ ] 모든 도메인 테스트 디렉토리 생성
-- [ ] 모든 도메인 `test_controller.py` 생성
+- [ ] 모든 도메인 `test_{feature}.py` 생성
 - [ ] pytest 실행 결과 출력 (FAILED 또는 ImportError)
 
 ---
@@ -189,14 +212,18 @@ def created_{domain}(session: Session, test_user) -> {Domain}:
 ╔══════════════════════════════════════════════════════════════╗
 ║              TEST CODE GENERATION COMPLETE                    ║
 ╠══════════════════════════════════════════════════════════════╣
-║ Domain: users                                                 ║
-║   - tests/modules/users/conftest.py          ✅ Created       ║
-║   - tests/modules/users/test_controller.py   ✅ Created       ║
+║ Domain: routes (Vertical Slice)                               ║
+║   - tests/modules/routes/conftest.py       ✅ Created         ║
+║   - tests/modules/routes/test_search.py    ✅ Created         ║
+║   - tests/modules/routes/test_recent.py    ✅ Created         ║
 ║   - Test cases: 10                                            ║
 ║                                                               ║
-║ Domain: orders                                                ║
-║   - tests/modules/orders/conftest.py         ✅ Created       ║
-║   - tests/modules/orders/test_controller.py  ✅ Created       ║
+║ Domain: translations (Vertical Slice)                         ║
+║   - tests/modules/translations/conftest.py          ✅ Created║
+║   - tests/modules/translations/test_translate_text.py ✅      ║
+║   - tests/modules/translations/test_translate_voice.py ✅     ║
+║   - tests/modules/translations/test_list.py         ✅ Created║
+║   - tests/modules/translations/test_delete.py       ✅ Created║
 ║   - Test cases: 12                                            ║
 ╠══════════════════════════════════════════════════════════════╣
 ║ pytest result: FAILED (expected - no implementation yet)      ║

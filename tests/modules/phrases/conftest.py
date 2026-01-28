@@ -8,7 +8,7 @@ from sqlmodel import Session
 
 from src.core.enums import MissionType, PhraseCategory
 from src.modules.missions.models import MissionStep, MissionTemplate
-from src.modules.phrases.models import Phrase, PhraseStepMapping
+from src.modules.phrases._models import Phrase, PhraseStepMapping
 
 
 def _utcnow() -> datetime:

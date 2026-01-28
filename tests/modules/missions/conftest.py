@@ -6,14 +6,14 @@ from uuid import uuid4
 import pytest
 from sqlmodel import Session
 
-from src.core.enums import MissionResult, MissionStatus, MissionType
-from src.modules.missions.models import (
+from src.core.enums import MissionStatus, MissionType
+from src.modules.missions._models import (
     MissionProgress,
     MissionStep,
     MissionStepProgress,
     MissionTemplate,
 )
-from src.modules.profiles.models import Profile
+from src.modules.profiles._models import Profile
 
 
 def _utcnow() -> datetime:

@@ -45,6 +45,14 @@ class RouteNotFoundError(AppError):
     status_code = 404
 
 
+class LocationNotFoundError(AppError):
+    """위치를 찾을 수 없음"""
+
+    status = Status.LOCATION_NOT_FOUND
+    message = "해당 위치를 찾을 수 없어요"
+    status_code = 404
+
+
 class UnauthorizedError(AppError):
     """인증 실패"""
 

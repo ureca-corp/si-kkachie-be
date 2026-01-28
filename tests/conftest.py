@@ -1,9 +1,8 @@
 """테스트 공통 픽스처
 
-Supabase Local 기반 테스트 환경:
-- DATABASE_URL 환경변수로 PostgreSQL 또는 SQLite 선택
-- auth.users는 Supabase가 관리하므로 모킹
-- profiles 테이블은 실제 DB에서 테스트
+- 기본: 인메모리 SQLite (빠른 단위 테스트)
+- DATABASE_URL 환경변수로 PostgreSQL 선택 가능
+- Supabase Auth는 모킹, 도메인 테이블은 실제 DB에서 테스트
 """
 
 import os
@@ -92,7 +91,7 @@ def test_supabase_user_id_fixture() -> UUID:
 @pytest.fixture(name="test_profile")
 def test_profile_fixture(session: Session, test_supabase_user_id: UUID):
     """테스트용 프로필 (DB에 저장)"""
-    from src.modules.profiles.models import Profile
+    from src.modules.profiles import Profile
 
     profile = Profile(
         id=uuid4(),

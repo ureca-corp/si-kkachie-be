@@ -126,6 +126,79 @@ raise UnauthorizedError("로그인이 필요해요")
 | "유효성 검사 실패" | "입력 정보를 다시 확인해 주세요" |
 | "내부 서버 오류" | "일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요" |
 
+## 모듈 구조 (Vertical Slice 패턴)
+
+### 소스 코드 구조
+
+```
+src/modules/{domain}/
+├── __init__.py           # router 조합
+├── {feature1}.py         # 기능 1 (DTO + Service + Controller)
+├── {feature2}.py         # 기능 2 (DTO + Service + Controller)
+├── _models.py            # 공유: SQLModel 정의
+├── _repository.py        # 공유: DB 접근
+└── _utils.py             # 공유: 유틸리티 함수 (선택)
+```
+
+### 각 기능 파일 구조
+
+```python
+"""기능 설명
+
+METHOD /endpoint
+"""
+
+from fastapi import APIRouter
+from pydantic import BaseModel
+
+# ─────────────────────────────────────────────────
+# Request/Response DTO
+# ─────────────────────────────────────────────────
+
+class SomeRequest(BaseModel): ...
+class SomeResponse(BaseModel): ...
+
+# ─────────────────────────────────────────────────
+# Service (비즈니스 로직)
+# ─────────────────────────────────────────────────
+
+def do_something(...) -> SomeResponse: ...
+
+# ─────────────────────────────────────────────────
+# Controller (엔드포인트)
+# ─────────────────────────────────────────────────
+
+router = APIRouter()
+
+@router.get("/endpoint")
+def endpoint(...): ...
+```
+
+### __init__.py 템플릿
+
+```python
+"""{domain} 도메인"""
+
+from fastapi import APIRouter
+
+from .feature1 import router as feature1_router
+from .feature2 import router as feature2_router
+
+router = APIRouter(prefix="/{domain}", tags=["{domain}"])
+router.include_router(feature1_router)
+router.include_router(feature2_router)
+```
+
+### 공유 모듈 (언더스코어 prefix)
+
+| 파일 | 역할 |
+|------|------|
+| `_models.py` | SQLModel 테이블 정의 |
+| `_repository.py` | DB 접근 함수 |
+| `_utils.py` | 유틸리티 함수 |
+
+---
+
 ## 테스트 작성 (TDD 필수)
 
 ### TDD 사이클
@@ -138,12 +211,12 @@ raise UnauthorizedError("로그인이 필요해요")
 
 ### 테스트 환경
 
-```python
-# 로컬 SQLite 사용 (실제 DB 트래픽 없음)
-TEST_DATABASE_URL = "sqlite://"  # 인메모리
+```bash
+# PostgreSQL 사용 (PostGIS 등 PostgreSQL 전용 기능 테스트)
+export $(cat .env.test | xargs) && uv run pytest tests/ -v
 ```
 
-### 테스트 구조 (CSR 패턴)
+### 테스트 구조 (Vertical Slice)
 
 ```
 tests/
@@ -152,15 +225,16 @@ tests/
 ├── fixtures/                # 도메인별 픽스처
 ├── helpers/                 # 유틸리티 (assertions, api)
 └── modules/{domain}/        # 도메인별 테스트
+    ├── __init__.py
     ├── conftest.py          # 도메인 전용 픽스처
-    ├── test_controller.py   # 엔드포인트 테스트 (통합)
-    └── test_service.py      # 비즈니스 로직 테스트 (단위)
+    ├── test_{feature1}.py   # 기능별 테스트
+    └── test_{feature2}.py   # 기능별 테스트
 ```
 
 ### 파일 구조
 
-- 한 파일 = 한 기능 (test_create.py, test_get.py 분리)
-- 도메인별가
+- 한 파일 = 한 기능 (test_search.py, test_recent.py 분리)
+- 도메인별
 ```bash
 # 무조건 uv add로만
 uv add fastapi

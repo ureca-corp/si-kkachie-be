@@ -6,8 +6,8 @@ from uuid import uuid4
 import pytest
 from sqlmodel import Session
 
-from src.modules.profiles.models import Profile
-from src.modules.translations.models import Translation
+from src.modules.profiles import Profile
+from src.modules.translations._models import Translation
 
 
 def _utcnow() -> datetime:

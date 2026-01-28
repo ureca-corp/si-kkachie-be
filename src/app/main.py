@@ -9,14 +9,15 @@ from fastapi import FastAPI
 
 from src.core.config import settings
 from src.core.exceptions import register_error_handlers
-from src.modules.health.controller import router as health_router
+from src.modules.health import router as health_router
 
 # 도메인 라우터
-from src.modules.missions.controller import router as missions_router
-from src.modules.phrases.controller import router as phrases_router
-from src.modules.profiles.controller import router as profiles_router
-from src.modules.routes.controller import router as routes_router
-from src.modules.translations.controller import router as translations_router
+from src.modules.locations import router as locations_router
+from src.modules.missions import router as missions_router
+from src.modules.phrases import router as phrases_router
+from src.modules.profiles import router as profiles_router
+from src.modules.routes import router as routes_router
+from src.modules.translations import router as translations_router
 
 
 @asynccontextmanager
@@ -45,3 +46,4 @@ app.include_router(translations_router)
 app.include_router(missions_router)
 app.include_router(phrases_router)
 app.include_router(routes_router)
+app.include_router(locations_router)
