@@ -10,7 +10,7 @@ SPEC 기반 테스트 케이스:
 - TC-R-103: 경유지 초과
 """
 
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
 
@@ -29,15 +29,16 @@ class TestSearchRoute:
     ) -> None:
         """TC-R-001: 기본 경로 검색 성공"""
         with patch(
-            "src.modules.routes.search.search_route_from_naver"
+            "src.modules.routes.search.get_directions",
+            new_callable=AsyncMock,
         ) as mock_naver:
             mock_naver.return_value = {
                 "total_distance_m": 12500,
                 "total_duration_s": 1800,
                 "path": [
-                    {"lat": 37.5547, "lng": 126.9706},
-                    {"lat": 37.5500, "lng": 126.9800},
-                    {"lat": 37.4979, "lng": 127.0276},
+                    [126.9706, 37.5547],
+                    [126.9800, 37.5500],
+                    [127.0276, 37.4979],
                 ],
             }
 
@@ -64,15 +65,16 @@ class TestSearchRoute:
     ) -> None:
         """TC-R-002: 경유지 포함 검색 성공"""
         with patch(
-            "src.modules.routes.search.search_route_from_naver"
+            "src.modules.routes.search.get_directions",
+            new_callable=AsyncMock,
         ) as mock_naver:
             mock_naver.return_value = {
                 "total_distance_m": 15000,
                 "total_duration_s": 2400,
                 "path": [
-                    {"lat": 37.5547, "lng": 126.9706},
-                    {"lat": 37.5636, "lng": 126.9869},  # 경유지
-                    {"lat": 37.4979, "lng": 127.0276},
+                    [126.9706, 37.5547],
+                    [126.9869, 37.5636],  # 경유지
+                    [127.0276, 37.4979],
                 ],
             }
 
@@ -94,14 +96,15 @@ class TestSearchRoute:
         route_search_request["option"] = "trafast"  # 빠른길
 
         with patch(
-            "src.modules.routes.search.search_route_from_naver"
+            "src.modules.routes.search.get_directions",
+            new_callable=AsyncMock,
         ) as mock_naver:
             mock_naver.return_value = {
                 "total_distance_m": 14000,  # 거리는 더 길지만
                 "total_duration_s": 1500,  # 시간은 더 짧음
                 "path": [
-                    {"lat": 37.5547, "lng": 126.9706},
-                    {"lat": 37.4979, "lng": 127.0276},
+                    [126.9706, 37.5547],
+                    [127.0276, 37.4979],
                 ],
             }
 
@@ -119,7 +122,8 @@ class TestSearchRoute:
     ) -> None:
         """TC-R-101: 경로 없음 -> 404"""
         with patch(
-            "src.modules.routes.search.search_route_from_naver"
+            "src.modules.routes.search.get_directions",
+            new_callable=AsyncMock,
         ) as mock_naver:
             mock_naver.side_effect = Exception("Route not found")
 
