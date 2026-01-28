@@ -15,6 +15,7 @@ from src.core.database import get_session
 from src.core.deps import CurrentProfile
 from src.core.exceptions import ExternalServiceError
 from src.core.response import ApiResponse, Status
+from src.external.maps.naver_provider import get_directions
 
 from . import _repository
 from ._models import RouteHistory, make_point
@@ -82,52 +83,28 @@ def _utcnow() -> datetime:
     return datetime.now(UTC)
 
 
-def search_route_from_naver(
-    start_lat: float,
-    start_lng: float,
-    end_lat: float,
-    end_lng: float,
-    waypoints: list[dict] | None = None,
-    option: str = "traoptimal",
-) -> dict:
-    """Naver Maps Directions API 호출
-
-    TODO: 실제 구현
-
-    Returns:
-        path: [[lng, lat], ...] 형식 (네이버 API 원본 형식)
-    """
-    # 임시 구현 (테스트용) - 네이버 API 원본 형식 [[lng, lat], ...]
-    return {
-        "total_distance_m": 12500,
-        "total_duration_s": 1800,
-        "path": [
-            [start_lng, start_lat],  # [lng, lat] 순서
-            [end_lng, end_lat],
-        ],
-    }
-
-
-def search_route(
+async def search_route(
     session: Session,
     profile_id: UUID,
     request: RouteSearchRequest,
 ) -> RouteSearchResponse:
     """경로 검색 및 저장"""
     waypoints_data = None
+    waypoints_coords: list[tuple[float, float]] | None = None
     if request.waypoints:
         waypoints_data = [
             {"name": wp.name, "lat": wp.lat, "lng": wp.lng} for wp in request.waypoints
         ]
+        waypoints_coords = [(wp.lng, wp.lat) for wp in request.waypoints]
 
     try:
-        # Naver API 호출
-        route_data = search_route_from_naver(
-            start_lat=request.start.lat,
+        # Naver Directions 5 API 호출
+        route_data = await get_directions(
             start_lng=request.start.lng,
-            end_lat=request.end.lat,
-            end_lng=request.end.lng,
-            waypoints=waypoints_data,
+            start_lat=request.start.lat,
+            goal_lng=request.end.lng,
+            goal_lat=request.end.lat,
+            waypoints=waypoints_coords,
             option=request.option,
         )
     except Exception as e:
@@ -179,7 +156,7 @@ router = APIRouter()
 
 
 @router.post("/search", response_model=ApiResponse[RouteSearchResponse])
-def search_route_endpoint(
+async def search_route_endpoint(
     request: RouteSearchRequest,
     profile: CurrentProfile,
     session: Session = Depends(get_session),
@@ -188,7 +165,7 @@ def search_route_endpoint(
     from src.core.exceptions import RouteNotFoundError
 
     try:
-        result = search_route(session, profile.id, request)
+        result = await search_route(session, profile.id, request)
 
         return ApiResponse(
             status=Status.SUCCESS,
