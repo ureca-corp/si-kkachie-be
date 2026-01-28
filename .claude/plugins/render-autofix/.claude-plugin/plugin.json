@@ -1,0 +1,9 @@
+{
+  "name": "render-autofix",
+  "version": "1.0.0",
+  "description": "Render 배포 오류 자동 감지 및 수정 워크플로우 자동화 플러그인",
+  "author": {
+    "name": "Kkachie Team"
+  },
+  "keywords": ["render", "deployment", "automation", "error-fix", "ci-cd"]
+}

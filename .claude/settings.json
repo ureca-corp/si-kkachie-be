@@ -1,4 +1,12 @@
 {
+  "extraKnownMarketplaces": {
+    "kkachie-local": {
+      "source": {
+        "source": "directory",
+        "path": "./.claude/plugins/render-autofix"
+      }
+    }
+  },
   "hooks": {
     "PostToolUse": [
       {
