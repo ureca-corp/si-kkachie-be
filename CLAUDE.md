@@ -28,7 +28,7 @@
 | 3 | `phase-3-spec-writer` | SPEC.md 작성 | SPEC.md + **DDD Diagram** + 승인 |
 | 4 | `phase-4-generator` | TDD 코드 생성 + 마이그레이션 | 테스트 통과 + DB 적용 |
 | 5 | `phase-5-reviewer` | 코드 검토 | CRITICAL 이슈 0 |
-| 6 | `phase-6-documenter` | 프론트엔드 문서화 | user_flows/ 생성 |
+| 6 | `phase-6-documenter` | API 문서화 | OpenAPI 스펙 검증 완료 |
 
 **흐름:**
 ```
@@ -50,7 +50,7 @@ Phase 4: TDD 코드 생성
     ↓
 Phase 5: 코드 검토 → CRITICAL 이슈 0
     ↓
-Phase 6: 프론트엔드 문서화 → docs/user_flows/ 생성
+Phase 6: API 문서화 → OpenAPI 스펙 검증 완료
     ↓
 완료: Git commit
 ```
@@ -81,20 +81,14 @@ Phase 6: 프론트엔드 문서화 → docs/user_flows/ 생성
 
 ---
 
-## External 모듈 (Strategy Pattern)
+## External 모듈
 
 ```
 src/external/
-├── auth/           # 인증 (JWT 기본, Firebase/Supabase 선택)
+├── maps/           # 지도/경로 (Naver Maps 등)
 ├── storage/        # 스토리지 (S3, R2, Supabase)
-├── cache/          # 캐시 (Redis, Upstash)
-└── maps/           # 지도/경로 (TMAP, Naver 등)
-    ├── docs/       # ⭐ OpenAPI 스펙 파일 (WebFetch 없이 참조용)
-    │   ├── tmap-transit-api.json
-    │   └── naver-maps-api.json
-    ├── base.py
-    ├── tmap.py
-    └── __init__.py
+├── speech/         # 음성 처리 (TTS, STT)
+└── translation/    # 번역 (Papago, OpenAI 등)
 ```
 
 ### OpenAPI 스펙 파일 (docs/)
@@ -107,20 +101,8 @@ src/external/
 
 ```bash
 # 스펙 파일 위치 예시
-src/external/maps/docs/tmap-transit-api.json      # TMAP 대중교통 API
-src/external/maps/docs/naver-search-api.json     # Naver 지역검색 API
-src/external/payments/docs/toss-payments-api.json # Toss Payments API
-```
-
-**사용 방법:**
-```python
-from src.external.auth import get_auth_provider
-from src.external.storage import get_storage_provider
-from src.external.cache import get_cache_provider
-
-auth = get_auth_provider()        # AUTH_BACKEND 설정에 따라 반환
-storage = get_storage_provider()  # STORAGE_BACKEND 설정에 따라 반환 (None 가능)
-cache = get_cache_provider()      # CACHE_BACKEND 설정에 따라 반환 (None 가능)
+src/external/maps/docs/naver-maps-api.json       # Naver Maps API
+src/external/translation/docs/papago-api.json   # Papago 번역 API
 ```
 
 ---
@@ -137,7 +119,7 @@ cache = get_cache_provider()      # CACHE_BACKEND 설정에 따라 반환 (None 
 │   ├── test-code-generator.md    # 테스트 코드 생성 (Red)
 │   └── logic-code-generator.md   # 구현 코드 생성 (Green)
 ├── phase-5-reviewer.md       # 코드 품질/보안 검토
-├── phase-6-documenter.md     # 프론트엔드 문서화 (user_flows)
+├── phase-6-documenter.md     # API 문서화
 └── session-wrapper.md        # 세션 마무리
 ```
 
@@ -230,9 +212,9 @@ Phase 5 (reviewer):
 
 Phase 6 (documenter):
   - API 엔드포인트 수집
-  - 유저 플로우 설계
-  - ASCII 화면 목업 생성
-  → docs/user_flows/ 생성
+  - OpenAPI 스펙 검증
+  - 엔드포인트 문서 확인
+  → OpenAPI 스펙 검증 완료
 
 완료: Git commit
 ```
