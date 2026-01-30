@@ -24,3 +24,5 @@ firebase-debug.log
 
 .DS_Store
 *.log
+# Google Cloud credentials
+credentials/

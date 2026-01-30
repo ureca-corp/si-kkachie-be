@@ -3,9 +3,26 @@
 Google Cloud Translation API v3 구현
 """
 
+import json
+
 from google.cloud import translate_v3 as translate
+from google.oauth2 import service_account
+
+from src.core.config import settings
 
 from .base import ITranslationProvider
+
+
+def _get_credentials() -> service_account.Credentials | None:
+    """Google Cloud 인증 정보 가져오기
+
+    GOOGLE_CREDENTIALS_JSON 환경변수가 있으면 JSON 파싱,
+    없으면 GOOGLE_APPLICATION_CREDENTIALS 파일 경로 사용 (기본 동작)
+    """
+    if settings.GOOGLE_CREDENTIALS_JSON:
+        info = json.loads(settings.GOOGLE_CREDENTIALS_JSON)
+        return service_account.Credentials.from_service_account_info(info)
+    return None  # 기본 ADC 사용
 
 
 class GoogleTranslationProvider(ITranslationProvider):
@@ -17,7 +34,8 @@ class GoogleTranslationProvider(ITranslationProvider):
         Args:
             project_id: Google Cloud 프로젝트 ID
         """
-        self._client = translate.TranslationServiceClient()
+        credentials = _get_credentials()
+        self._client = translate.TranslationServiceClient(credentials=credentials)
         self._project_id = project_id
         self._parent = f"projects/{project_id}/locations/global"
 

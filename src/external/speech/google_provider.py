@@ -3,9 +3,26 @@
 Google Cloud Speech-to-Text 및 Text-to-Speech API 구현
 """
 
+import json
+
 from google.cloud import speech, texttospeech
+from google.oauth2 import service_account
+
+from src.core.config import settings
 
 from .base import ISpeechProvider
+
+
+def _get_credentials() -> service_account.Credentials | None:
+    """Google Cloud 인증 정보 가져오기
+
+    GOOGLE_CREDENTIALS_JSON 환경변수가 있으면 JSON 파싱,
+    없으면 GOOGLE_APPLICATION_CREDENTIALS 파일 경로 사용 (기본 동작)
+    """
+    if settings.GOOGLE_CREDENTIALS_JSON:
+        info = json.loads(settings.GOOGLE_CREDENTIALS_JSON)
+        return service_account.Credentials.from_service_account_info(info)
+    return None  # 기본 ADC 사용
 
 
 class GoogleSpeechProvider(ISpeechProvider):
@@ -23,13 +40,10 @@ class GoogleSpeechProvider(ISpeechProvider):
     }
 
     def __init__(self) -> None:
-        """Google Cloud 클라이언트 초기화
-
-        Note:
-            GOOGLE_APPLICATION_CREDENTIALS 환경변수로 서비스 계정 키 설정 필요
-        """
-        self._stt_client = speech.SpeechClient()
-        self._tts_client = texttospeech.TextToSpeechClient()
+        """Google Cloud 클라이언트 초기화"""
+        credentials = _get_credentials()
+        self._stt_client = speech.SpeechClient(credentials=credentials)
+        self._tts_client = texttospeech.TextToSpeechClient(credentials=credentials)
 
     def _normalize_language_code(self, language: str) -> str:
         """언어 코드를 BCP-47 형식으로 정규화

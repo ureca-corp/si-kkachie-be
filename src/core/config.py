@@ -26,8 +26,10 @@ class Settings(BaseSettings):
     NAVER_SEARCH_CLIENT_SECRET: str | None = None
 
     # Google Cloud (Speech-to-Text, Text-to-Speech, Translation)
-    # GOOGLE_APPLICATION_CREDENTIALS 환경변수로 서비스 계정 키 경로 설정 필요
+    # 로컬: GOOGLE_APPLICATION_CREDENTIALS 환경변수로 서비스 계정 키 경로 설정
+    # 서버: GOOGLE_CREDENTIALS_JSON 환경변수에 JSON 내용 직접 설정
     GOOGLE_CLOUD_PROJECT: str | None = None
+    GOOGLE_CREDENTIALS_JSON: str | None = None  # JSON 문자열 (서버용)
 
     model_config = SettingsConfigDict(
         env_file=".env",
