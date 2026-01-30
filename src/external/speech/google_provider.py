@@ -85,6 +85,9 @@ class GoogleSpeechProvider(ISpeechProvider):
             # sample_rate_hertz 생략 - WAV 헤더에서 자동 감지
             language_code=language_code,
             enable_automatic_punctuation=True,
+            # 스테레오 오디오 지원 (2채널)
+            audio_channel_count=2,
+            enable_separate_recognition_per_channel=False,
         )
 
         # STT 요청
