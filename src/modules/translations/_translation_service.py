@@ -20,9 +20,32 @@ def translate(text: str, source_lang: str, target_lang: str) -> str:
 
 
 def speech_to_text(audio_data: bytes, language: str) -> dict:
-    """Google Cloud Speech-to-Text API"""
-    # TODO: 실제 구현
-    return {"text": "안녕하세요", "confidence": 0.95}
+    """Google Cloud Speech-to-Text API
+
+    Args:
+        audio_data: 오디오 바이너리 데이터
+        language: 음성 언어 코드 (예: "en", "ko")
+
+    Returns:
+        dict: {"text": 인식된 텍스트, "confidence": 신뢰도}
+    """
+    # TODO: 실제 Google Cloud Speech-to-Text 구현
+    # from src.external.speech import get_speech_provider
+    # provider = get_speech_provider()
+    # if provider:
+    #     return provider.speech_to_text(audio_data, language)
+
+    # 임시 구현 (테스트용) - language에 따라 다른 mock 응답
+    # 언어 코드 정규화 (en-US -> en, ko-KR -> ko)
+    lang_code = language.split("-")[0].lower() if language else "ko"
+
+    if lang_code == "en":
+        return {"text": "Hello", "confidence": 0.95}
+    elif lang_code == "ko":
+        return {"text": "안녕하세요", "confidence": 0.95}
+    else:
+        # 지원하지 않는 언어는 원본 그대로 반환 (기본값)
+        return {"text": "Hello", "confidence": 0.90}
 
 
 def text_to_speech(text: str, language: str) -> dict:
