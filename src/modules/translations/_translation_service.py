@@ -5,16 +5,29 @@ Google Cloud Translation, Speech-to-Text, Text-to-Speech API 호출
 
 
 def translate(text: str, source_lang: str, target_lang: str) -> str:
-    """Google Cloud Translation API로 텍스트 번역"""
+    """Google Cloud Translation API로 텍스트 번역
+
+    Args:
+        text: 번역할 텍스트
+        source_lang: 원본 언어 코드 (예: "en", "ko", "en-US")
+        target_lang: 대상 언어 코드 (예: "en", "ko", "ko-KR")
+
+    Returns:
+        번역된 텍스트
+    """
     # TODO: 실제 구현
     # from src.external.translation import get_translation_provider
     # provider = get_translation_provider()
     # return provider.translate(text, source_lang, target_lang)
 
+    # 언어 코드 정규화 (en-US -> en, ko-KR -> ko, EN -> en)
+    src = source_lang.split("-")[0].lower() if source_lang else ""
+    tgt = target_lang.split("-")[0].lower() if target_lang else ""
+
     # 임시 구현 (테스트용)
-    if source_lang == "ko" and target_lang == "en":
+    if src == "ko" and tgt == "en":
         return "Hello"
-    elif source_lang == "en" and target_lang == "ko":
+    elif src == "en" and tgt == "ko":
         return "안녕하세요"
     return text
 
