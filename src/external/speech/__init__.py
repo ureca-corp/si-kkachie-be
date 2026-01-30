@@ -14,11 +14,23 @@ def get_speech_provider() -> ISpeechProvider | None:
     """Speech 공급자 반환 (설정 없으면 None)
 
     Note:
-        GOOGLE_APPLICATION_CREDENTIALS 환경변수 설정 필요
+        GOOGLE_CLOUD_PROJECT와 GOOGLE_CREDENTIALS_JSON (또는 ADC) 필요
     """
     global _speech_instance
 
+    # 프로젝트 ID 필수
     if not settings.GOOGLE_CLOUD_PROJECT:
+        return None
+
+    # 서버 환경: GOOGLE_CREDENTIALS_JSON 필수
+    # 로컬 환경: GOOGLE_APPLICATION_CREDENTIALS 또는 gcloud ADC 사용
+    import os
+
+    has_credentials = bool(
+        settings.GOOGLE_CREDENTIALS_JSON
+        or os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+    )
+    if not has_credentials:
         return None
 
     if _speech_instance is not None:
