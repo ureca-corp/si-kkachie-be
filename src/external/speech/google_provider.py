@@ -78,11 +78,11 @@ class GoogleSpeechProvider(ISpeechProvider):
         """
         language_code = self._normalize_language_code(language)
 
-        # 오디오 설정 (자동 인코딩 감지)
+        # 오디오 설정 (자동 인코딩 및 샘플레이트 감지)
         audio = speech.RecognitionAudio(content=audio_data)
         config = speech.RecognitionConfig(
             encoding=speech.RecognitionConfig.AudioEncoding.ENCODING_UNSPECIFIED,
-            sample_rate_hertz=16000,
+            # sample_rate_hertz 생략 - WAV 헤더에서 자동 감지
             language_code=language_code,
             enable_automatic_punctuation=True,
         )
