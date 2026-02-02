@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     NAVER_SEARCH_CLIENT_ID: str | None = None
     NAVER_SEARCH_CLIENT_SECRET: str | None = None
 
+    # Kakao Mobility (Directions API)
+    KAKAO_REST_API_KEY: str | None = None
+
     # Google Cloud (Speech-to-Text, Text-to-Speech, Translation)
     # 로컬: GOOGLE_APPLICATION_CREDENTIALS 환경변수로 서비스 계정 키 경로 설정
     # 서버: GOOGLE_CREDENTIALS_JSON 환경변수에 JSON 내용 직접 설정

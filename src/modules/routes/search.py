@@ -15,7 +15,7 @@ from src.core.database import get_session
 from src.core.deps import CurrentProfile
 from src.core.exceptions import ExternalServiceError
 from src.core.response import ApiResponse, Status
-from src.external.maps.naver_provider import get_directions
+from src.external.maps.kakao_provider import get_directions
 
 from . import _repository
 from ._models import RouteHistory, make_point
@@ -70,7 +70,7 @@ class RouteSearchResponse(BaseModel):
     distance_text: str
     duration_text: str
     path: list[list[float]] = Field(
-        description="경로 좌표 [[lng, lat], ...] - 경도, 위도 순서 (네이버 API 원본 형식)"
+        description="경로 좌표 [[lng, lat], ...] - 경도, 위도 순서"
     )
 
 
@@ -98,7 +98,7 @@ async def search_route(
         waypoints_coords = [(wp.lng, wp.lat) for wp in request.waypoints]
 
     try:
-        # Naver Directions 5 API 호출
+        # Kakao Mobility Directions API 호출
         route_data = await get_directions(
             start_lng=request.start.lng,
             start_lat=request.start.lat,

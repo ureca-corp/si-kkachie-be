@@ -1,8 +1,11 @@
 """Maps external module
 
-Naver Maps API 연동을 위한 외부 모듈
+지도/경로 API 연동을 위한 외부 모듈
+- 경로 검색: Kakao Mobility API
+- 역지오코딩/장소검색: Naver Maps API
 """
 
-from . import naver_provider
+from . import kakao_provider, naver_provider
+from .kakao_provider import KakaoDirectionsError
 
-__all__ = ["naver_provider"]
+__all__ = ["KakaoDirectionsError", "kakao_provider", "naver_provider"]
