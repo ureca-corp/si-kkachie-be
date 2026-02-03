@@ -90,3 +90,48 @@ def place_search_empty_response() -> dict:
         "display": 0,
         "items": [],
     }
+
+
+@pytest.fixture
+def category_search_response() -> dict:
+    """Mock Kakao Category Search API response"""
+    return {
+        "total_count": 45,
+        "is_end": False,
+        "places": [
+            {
+                "id": "8569385",
+                "name": "스타벅스 강남역점",
+                "category": "카페",
+                "address": "서울 강남구 역삼동 858",
+                "road_address": "서울 강남구 강남대로 396",
+                "phone": "02-555-1234",
+                "lat": 37.4979,
+                "lng": 127.0276,
+                "distance_m": 150,
+                "place_url": "http://place.map.kakao.com/8569385",
+            },
+            {
+                "id": "12345678",
+                "name": "투썸플레이스 강남점",
+                "category": "카페",
+                "address": "서울 강남구 역삼동 100",
+                "road_address": "서울 강남구 테헤란로 100",
+                "phone": "02-555-5678",
+                "lat": 37.4985,
+                "lng": 127.0280,
+                "distance_m": 300,
+                "place_url": "http://place.map.kakao.com/12345678",
+            },
+        ],
+    }
+
+
+@pytest.fixture
+def category_search_empty_response() -> dict:
+    """Mock Kakao Category Search API response - 결과 없음"""
+    return {
+        "total_count": 0,
+        "is_end": True,
+        "places": [],
+    }

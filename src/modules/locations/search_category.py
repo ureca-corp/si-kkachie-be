@@ -6,6 +6,7 @@ GET /locations/search/category
 from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field
 
+from src.core.deps import CurrentProfile
 from src.core.exceptions import ExternalServiceError
 from src.core.response import ApiResponse, Status
 from src.external.maps import kakao_provider
@@ -85,6 +86,7 @@ router = APIRouter()
 
 @router.get("/search/category", response_model=ApiResponse[PlaceCategoryResponse])
 async def search_category_endpoint(
+    _profile: CurrentProfile,
     category: str = Query(..., description="카테고리 코드 (MT1, FD6, CE7 등)"),
     lat: float = Query(..., ge=-90, le=90, description="위도"),
     lng: float = Query(..., ge=-180, le=180, description="경도"),
