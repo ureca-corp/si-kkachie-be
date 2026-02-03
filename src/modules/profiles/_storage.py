@@ -5,7 +5,7 @@
 
 from uuid import UUID
 
-from src.external.storage import get_storage_provider
+from src.external.supabase import get_storage_provider
 
 
 def create_presigned_url(

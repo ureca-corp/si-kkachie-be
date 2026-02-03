@@ -15,7 +15,7 @@ from src.core.database import get_session
 from src.core.deps import CurrentProfile
 from src.core.exceptions import ExternalServiceError
 from src.core.response import ApiResponse, Status
-from src.external.maps.kakao_provider import get_directions
+from src.external.kakao import get_kakao_provider
 
 from . import _repository
 from ._models import RouteHistory, make_point
@@ -99,7 +99,7 @@ async def search_route(
 
     try:
         # Kakao Mobility Directions API 호출
-        route_data = await get_directions(
+        route_data = await get_kakao_provider().directions(
             start_lng=request.start.lng,
             start_lat=request.start.lat,
             goal_lng=request.end.lng,

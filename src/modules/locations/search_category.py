@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from src.core.deps import CurrentProfile
 from src.core.exceptions import ExternalServiceError
 from src.core.response import ApiResponse, Status
-from src.external.maps import kakao_provider
+from src.external.kakao import get_kakao_provider
 
 # ─────────────────────────────────────────────────
 # Request/Response DTO
@@ -55,7 +55,7 @@ async def search_places_by_category(
 ) -> PlaceCategoryResponse:
     """카테고리별 장소 검색"""
     try:
-        data = await kakao_provider.search_by_category(
+        data = await get_kakao_provider().search_by_category(
             category=category,
             lng=lng,
             lat=lat,

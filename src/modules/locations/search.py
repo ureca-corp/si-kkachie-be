@@ -11,7 +11,7 @@ from src.core.database import get_session
 from src.core.deps import CurrentProfile
 from src.core.exceptions import ExternalServiceError
 from src.core.response import ApiResponse, Status
-from src.external.maps import naver_provider
+from src.external.naver import get_naver_provider
 
 from ._parsers import parse_place_item
 from ._utils import calculate_distance
@@ -62,7 +62,7 @@ async def search_places(
         ExternalServiceError: API 호출 실패
     """
     try:
-        data = await naver_provider.search_places(query, display=min(limit, 5))
+        data = await get_naver_provider().search_places(query, display=min(limit, 5))
     except Exception as e:
         raise ExternalServiceError("장소 검색에 실패했어요") from e
 

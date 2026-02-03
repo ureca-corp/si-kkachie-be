@@ -4,7 +4,7 @@ Vertex AI (Gemini) 번역 API 호출
 Provider가 설정되지 않으면 mock 응답 반환 (개발/테스트용)
 """
 
-from src.external.translation import ITranslationProvider, get_translation_provider
+from src.external.google import IVertexAIProvider, get_vertex_provider
 
 from ._interfaces import ITranslationService
 
@@ -12,13 +12,13 @@ from ._interfaces import ITranslationService
 class TranslationService(ITranslationService):
     """Vertex AI 기반 번역 서비스 구현"""
 
-    def __init__(self, provider: ITranslationProvider | None = None) -> None:
+    def __init__(self, provider: IVertexAIProvider | None = None) -> None:
         """번역 서비스 초기화
 
         Args:
             provider: 번역 Provider (None이면 자동 생성)
         """
-        self._provider = provider if provider is not None else get_translation_provider()
+        self._provider = provider if provider is not None else get_vertex_provider()
 
     def translate(
         self,
@@ -39,7 +39,7 @@ class TranslationService(ITranslationService):
             번역된 텍스트
         """
         if self._provider:
-            return self._provider.translate_with_context(
+            return self._provider.translate(
                 text, source_lang, target_lang, context
             )
 

@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from src.core.deps import CurrentProfile
 from src.core.exceptions import ExternalServiceError, LocationNotFoundError
 from src.core.response import ApiResponse, Status
-from src.external.maps import naver_provider
+from src.external.naver import get_naver_provider
 
 from ._parsers import parse_reverse_geocode_response
 
@@ -48,7 +48,7 @@ async def get_reverse_geocode(lat: float, lng: float) -> ReverseGeocodeResponse:
         LocationNotFoundError: 해당 좌표의 주소를 찾을 수 없음
     """
     try:
-        data = await naver_provider.reverse_geocode(lng, lat)
+        data = await get_naver_provider().reverse_geocode(lng, lat)
     except Exception as e:
         raise ExternalServiceError("위치 정보를 가져올 수 없어요") from e
 
