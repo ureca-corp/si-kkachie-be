@@ -1,10 +1,11 @@
 """POST /translate/text 엔드포인트
 
-텍스트 번역 기능을 담당하는 Vertical Slice
+텍스트 번역 API
+Controller는 HTTP 처리만 담당, 비즈니스 로직은 Use Case에서 처리
 """
 
-from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from datetime import datetime
+from uuid import UUID
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, model_validator
@@ -12,11 +13,9 @@ from sqlmodel import Session
 
 from src.core.database import get_session
 from src.core.deps import CurrentProfile
-from src.core.enums import TranslationType
 from src.core.response import ApiResponse, Status
 
-from . import _repository, _translation_service
-from ._models import Translation
+from ._use_cases import CreateTextTranslationUseCase, TextTranslationInput
 
 router = APIRouter(tags=["translations"])
 
@@ -33,6 +32,9 @@ class TextTranslateRequest(BaseModel):
     source_lang: str = Field(pattern=r"^(ko|en)$")
     target_lang: str = Field(pattern=r"^(ko|en)$")
     mission_progress_id: str | None = None
+    thread_id: str | None = None
+    context_primary: str | None = None  # 1차 카테고리 코드 (FD6, CE7 등)
+    context_sub: str | None = None  # 2차 카테고리 코드 (ordering, payment 등)
 
     @model_validator(mode="after")
     def validate_different_languages(self):
@@ -61,46 +63,6 @@ class TranslationResponse(BaseModel):
 
 
 # ─────────────────────────────────────────────────
-# Service
-# ─────────────────────────────────────────────────
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC)
-
-
-def create_text_translation(
-    session: Session,
-    profile_id: UUID,
-    request: TextTranslateRequest,
-) -> Translation:
-    """텍스트 번역 생성"""
-    # 번역 수행
-    translated_text = _translation_service.translate(
-        request.source_text,
-        request.source_lang,
-        request.target_lang,
-    )
-
-    # 번역 기록 저장
-    translation = Translation(
-        id=uuid4(),
-        profile_id=profile_id,
-        source_text=request.source_text,
-        translated_text=translated_text,
-        source_lang=request.source_lang,
-        target_lang=request.target_lang,
-        translation_type=TranslationType.TEXT.value,
-        mission_progress_id=(
-            UUID(request.mission_progress_id) if request.mission_progress_id else None
-        ),
-        created_at=_utcnow(),
-    )
-
-    return _repository.create(session, translation)
-
-
-# ─────────────────────────────────────────────────
 # Controller
 # ─────────────────────────────────────────────────
 
@@ -112,25 +74,41 @@ def translate_text(
     session: Session = Depends(get_session),
 ) -> ApiResponse[TranslationResponse]:
     """텍스트 번역"""
-    translation = create_text_translation(session, profile.id, request)
-
-    response_data = TranslationResponse(
-        id=str(translation.id),
-        source_text=translation.source_text,
-        translated_text=translation.translated_text,
-        source_lang=translation.source_lang,
-        target_lang=translation.target_lang,
-        translation_type=translation.translation_type,
+    # Use Case 입력 생성
+    input_data = TextTranslationInput(
+        profile_id=profile.id,
+        source_text=request.source_text,
+        source_lang=request.source_lang,
+        target_lang=request.target_lang,
         mission_progress_id=(
-            str(translation.mission_progress_id)
-            if translation.mission_progress_id
-            else None
+            UUID(request.mission_progress_id) if request.mission_progress_id else None
         ),
-        created_at=translation.created_at,
+        thread_id=UUID(request.thread_id) if request.thread_id else None,
+        context_primary=request.context_primary,
+        context_sub=request.context_sub,
     )
 
+    # Use Case 실행
+    use_case = CreateTextTranslationUseCase(session)
+    result = use_case.execute(input_data)
+
+    # 응답 변환
     return ApiResponse(
         status=Status.SUCCESS,
         message="번역이 완료됐어요",
-        data=response_data,
+        data=TranslationResponse(
+            id=str(result.id),
+            source_text=result.source_text,
+            translated_text=result.translated_text,
+            source_lang=result.source_lang,
+            target_lang=result.target_lang,
+            translation_type=result.translation_type,
+            mission_progress_id=(
+                str(result.mission_progress_id) if result.mission_progress_id else None
+            ),
+            audio_url=result.audio_url,
+            duration_ms=result.duration_ms,
+            confidence_score=result.confidence_score,
+            created_at=result.created_at,
+        ),
     )

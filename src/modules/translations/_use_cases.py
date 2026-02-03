@@ -56,12 +56,19 @@ class TranslationResult:
     """번역 결과 DTO"""
 
     id: UUID
+    profile_id: UUID
     source_text: str
     translated_text: str
     source_lang: str
     target_lang: str
     translation_type: str
+    mission_progress_id: UUID | None
+    thread_id: UUID | None
+    context_primary: str | None
+    context_sub: str | None
     audio_url: str | None
+    duration_ms: int | None
+    confidence_score: float | None
     created_at: datetime
 
 
@@ -207,12 +214,19 @@ class GetThreadUseCase:
         translation_results = [
             TranslationResult(
                 id=t.id,
+                profile_id=t.profile_id,
                 source_text=t.source_text,
                 translated_text=t.translated_text,
                 source_lang=t.source_lang,
                 target_lang=t.target_lang,
                 translation_type=t.translation_type,
+                mission_progress_id=t.mission_progress_id,
+                thread_id=t.thread_id,
+                context_primary=t.context_primary,
+                context_sub=t.context_sub,
                 audio_url=t.audio_url,
+                duration_ms=t.duration_ms,
+                confidence_score=t.confidence_score,
                 created_at=t.created_at,
             )
             for t in translations
@@ -342,4 +356,214 @@ class GetCategoriesUseCase:
             primary_categories=primary_results,
             sub_categories=sub_results,
             mappings=mappings_dict,
+        )
+
+
+# ─────────────────────────────────────────────────
+# Translation Use Cases
+# ─────────────────────────────────────────────────
+
+
+@dataclass
+class TextTranslationInput:
+    """텍스트 번역 입력 DTO"""
+
+    profile_id: UUID
+    source_text: str
+    source_lang: str
+    target_lang: str
+    mission_progress_id: UUID | None = None
+    thread_id: UUID | None = None
+    context_primary: str | None = None
+    context_sub: str | None = None
+
+
+@dataclass
+class VoiceTranslationInput:
+    """음성 번역 입력 DTO"""
+
+    profile_id: UUID
+    audio_data: bytes
+    source_lang: str
+    target_lang: str
+    mission_progress_id: UUID | None = None
+    thread_id: UUID | None = None
+    context_primary: str | None = None
+    context_sub: str | None = None
+
+
+class CreateTextTranslationUseCase:
+    """텍스트 번역 Use Case
+
+    비즈니스 로직:
+    - 컨텍스트가 있으면 Vertex AI (Gemini) 사용
+    - 컨텍스트가 없으면 Google Translation API 사용
+    """
+
+    def __init__(self, session: Session):
+        self._session = session
+
+    def execute(self, input_data: TextTranslationInput) -> TranslationResult:
+        """텍스트 번역 실행
+
+        Args:
+            input_data: 번역 입력 데이터
+
+        Returns:
+            번역 결과 DTO
+        """
+        from src.core.enums import TranslationType
+
+        from . import _context_service, _translation_service
+        from ._models import Translation
+
+        # 컨텍스트 빌드 (카테고리가 있으면)
+        context = None
+        if input_data.context_primary and input_data.context_sub:
+            context = _context_service.build_translation_context(
+                self._session,
+                input_data.context_primary,
+                input_data.context_sub,
+                input_data.target_lang,
+            )
+
+        # 번역 수행
+        translated_text = _translation_service.translate(
+            input_data.source_text,
+            input_data.source_lang,
+            input_data.target_lang,
+            context,
+        )
+
+        # Entity 생성
+        translation = Translation(
+            id=uuid4(),
+            profile_id=input_data.profile_id,
+            source_text=input_data.source_text,
+            translated_text=translated_text,
+            source_lang=input_data.source_lang,
+            target_lang=input_data.target_lang,
+            translation_type=TranslationType.TEXT.value,
+            mission_progress_id=input_data.mission_progress_id,
+            thread_id=input_data.thread_id,
+            context_primary=input_data.context_primary,
+            context_sub=input_data.context_sub,
+            created_at=_utcnow(),
+        )
+
+        # 저장
+        translation = _repository.create(self._session, translation)
+
+        return TranslationResult(
+            id=translation.id,
+            profile_id=translation.profile_id,
+            source_text=translation.source_text,
+            translated_text=translation.translated_text,
+            source_lang=translation.source_lang,
+            target_lang=translation.target_lang,
+            translation_type=translation.translation_type,
+            mission_progress_id=translation.mission_progress_id,
+            thread_id=translation.thread_id,
+            context_primary=translation.context_primary,
+            context_sub=translation.context_sub,
+            audio_url=translation.audio_url,
+            duration_ms=translation.duration_ms,
+            confidence_score=translation.confidence_score,
+            created_at=translation.created_at,
+        )
+
+
+class CreateVoiceTranslationUseCase:
+    """음성 번역 Use Case
+
+    비즈니스 로직:
+    - STT → 번역 → TTS 파이프라인
+    - 컨텍스트가 있으면 Vertex AI (Gemini) 사용
+    """
+
+    def __init__(self, session: Session):
+        self._session = session
+
+    def execute(self, input_data: VoiceTranslationInput) -> TranslationResult:
+        """음성 번역 실행
+
+        Args:
+            input_data: 번역 입력 데이터
+
+        Returns:
+            번역 결과 DTO
+        """
+        from src.core.enums import TranslationType
+
+        from . import _context_service, _translation_service
+        from ._models import Translation
+
+        # 1. STT (Speech-to-Text)
+        stt_result = _translation_service.speech_to_text(
+            input_data.audio_data, input_data.source_lang
+        )
+        source_text = stt_result["text"]
+        confidence = stt_result["confidence"]
+
+        # 2. 컨텍스트 빌드 (카테고리가 있으면)
+        context = None
+        if input_data.context_primary and input_data.context_sub:
+            context = _context_service.build_translation_context(
+                self._session,
+                input_data.context_primary,
+                input_data.context_sub,
+                input_data.target_lang,
+            )
+
+        # 3. 번역 (컨텍스트가 있으면 Vertex AI 사용)
+        translated_text = _translation_service.translate(
+            source_text,
+            input_data.source_lang,
+            input_data.target_lang,
+            context,
+        )
+
+        # 4. TTS (Text-to-Speech)
+        tts_result = _translation_service.text_to_speech(
+            translated_text, input_data.target_lang
+        )
+
+        # Entity 생성
+        translation = Translation(
+            id=uuid4(),
+            profile_id=input_data.profile_id,
+            source_text=source_text,
+            translated_text=translated_text,
+            source_lang=input_data.source_lang,
+            target_lang=input_data.target_lang,
+            translation_type=TranslationType.VOICE.value,
+            mission_progress_id=input_data.mission_progress_id,
+            thread_id=input_data.thread_id,
+            context_primary=input_data.context_primary,
+            context_sub=input_data.context_sub,
+            audio_url=tts_result["audio_url"],
+            duration_ms=tts_result["duration_ms"],
+            confidence_score=confidence,
+            created_at=_utcnow(),
+        )
+
+        # 저장
+        translation = _repository.create(self._session, translation)
+
+        return TranslationResult(
+            id=translation.id,
+            profile_id=translation.profile_id,
+            source_text=translation.source_text,
+            translated_text=translation.translated_text,
+            source_lang=translation.source_lang,
+            target_lang=translation.target_lang,
+            translation_type=translation.translation_type,
+            mission_progress_id=translation.mission_progress_id,
+            thread_id=translation.thread_id,
+            context_primary=translation.context_primary,
+            context_sub=translation.context_sub,
+            audio_url=translation.audio_url,
+            duration_ms=translation.duration_ms,
+            confidence_score=translation.confidence_score,
+            created_at=translation.created_at,
         )

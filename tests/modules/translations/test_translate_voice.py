@@ -27,13 +27,13 @@ class TestTranslateVoice:
 
         with (
             patch(
-                "src.modules.translations.translate_voice._translation_service.speech_to_text"
+                "src.modules.translations._translation_service.speech_to_text"
             ) as mock_stt,
             patch(
-                "src.modules.translations.translate_voice._translation_service.translate"
+                "src.modules.translations._translation_service.translate"
             ) as mock_translate,
             patch(
-                "src.modules.translations.translate_voice._translation_service.text_to_speech"
+                "src.modules.translations._translation_service.text_to_speech"
             ) as mock_tts,
         ):
             mock_stt.return_value = {"text": "안녕하세요", "confidence": 0.95}
@@ -67,7 +67,7 @@ class TestTranslateVoice:
     ) -> None:
         """TC-T-103: 잘못된 오디오 파일 -> 400"""
         with patch(
-            "src.modules.translations.translate_voice._translation_service.speech_to_text"
+            "src.modules.translations._translation_service.speech_to_text"
         ) as mock_stt:
             # ValueError는 오디오 검증 실패를 나타냄
             mock_stt.side_effect = ValueError("Invalid audio format")

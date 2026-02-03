@@ -27,7 +27,7 @@ class TestTranslateText:
     ) -> None:
         """TC-T-001: 텍스트 번역 (한->영) 성공"""
         with patch(
-            "src.modules.translations.translate_text._translation_service.translate"
+            "src.modules.translations._translation_service.translate"
         ) as mock_translate:
             mock_translate.return_value = "Hello"
 
@@ -53,7 +53,7 @@ class TestTranslateText:
     ) -> None:
         """TC-T-002: 텍스트 번역 (영->한) 성공"""
         with patch(
-            "src.modules.translations.translate_text._translation_service.translate"
+            "src.modules.translations._translation_service.translate"
         ) as mock_translate:
             mock_translate.return_value = "안녕하세요"
 
@@ -136,7 +136,7 @@ class TestTranslateText:
         max_text = "가" * 5000  # 정확히 5000자
 
         with patch(
-            "src.modules.translations.translate_text._translation_service.translate"
+            "src.modules.translations._translation_service.translate"
         ) as mock_translate:
             mock_translate.return_value = "A" * 5000
 
