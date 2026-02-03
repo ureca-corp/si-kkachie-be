@@ -51,8 +51,14 @@ def engine_fixture():
 def session_fixture(engine) -> Generator[Session, None, None]:
     """테스트용 데이터베이스 세션 (테스트별 격리)"""
     if not _USE_POSTGRES:
-        # SQLite: 매 테스트마다 테이블 생성
-        SQLModel.metadata.create_all(engine)
+        # SQLite: PostGIS 테이블 제외하고 테이블 생성
+        # route_history는 PostGIS Geography 타입 사용하므로 SQLite 미지원
+        tables_to_create = [
+            table
+            for table in SQLModel.metadata.sorted_tables
+            if table.name != "route_history"
+        ]
+        SQLModel.metadata.create_all(engine, tables=tables_to_create)
 
     # 트랜잭션 시작 (테스트 격리용)
     connection = engine.connect()
