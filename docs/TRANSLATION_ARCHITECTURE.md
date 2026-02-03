@@ -1,304 +1,353 @@
-# Translation Voice API Architecture
+# Translation Module Architecture
 
-음성 번역 API (`/translate/voice`)의 전체 아키텍처와 데이터 흐름을 설명합니다.
+번역 모듈의 전체 아키텍처와 데이터 흐름을 설명합니다.
 
-## 전체 흐름
+## 주요 기능
+
+| 기능 | 설명 |
+|------|------|
+| 텍스트 번역 | 한/영 텍스트 번역 |
+| 음성 번역 | STT → 번역 → TTS 파이프라인 |
+| 스레드 관리 | 대화 컨텍스트 유지 |
+| 카테고리 컨텍스트 | 상황별 맞춤 번역 (Vertex AI) |
+
+---
+
+## Clean Architecture 레이어
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                        /translate/voice API 전체 흐름                            │
-└─────────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Presentation Layer (Controllers)                                            │
+│ - translate_text.py, translate_voice.py                                     │
+│ - threads_*.py, categories_list.py                                          │
+│ - HTTP 요청/응답 처리만 담당                                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Application Layer (Use Cases)                                               │
+│ - CreateTextTranslationUseCase                                              │
+│ - CreateVoiceTranslationUseCase                                             │
+│ - CreateThreadUseCase, GetThreadUseCase, etc.                               │
+│ - 비즈니스 로직 캡슐화                                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Domain Layer                                                                │
+│ - _models.py (Translation, TranslationThread, Categories)                   │
+│ - _exceptions.py (InvalidCategoryError, ThreadNotFoundError)                │
+│ - _context_service.py (컨텍스트 프롬프트 빌드)                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Infrastructure Layer                                                        │
+│ - _repository.py (DB 접근)                                                  │
+│ - _translation_service.py (외부 API 호출)                                   │
+│ - External Providers (Google, Vertex AI, Supabase)                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
-┌──────────┐     POST /translate/voice      ┌──────────────────────────────────────┐
-│  Client  │  ─────────────────────────────▶│  translate_voice.py                  │
-│ (App/Web)│    • audio_file (WAV)          │  ┌──────────────────────────────────┐│
-│          │    • sourceLang: "en"          │  │ translate_voice() endpoint       ││
-│          │    • targetLang: "ko"          │  └──────────────────────────────────┘│
-└──────────┘                                └───────────────┬──────────────────────┘
-     ▲                                                      │
-     │                                                      ▼
-     │                                      ┌──────────────────────────────────────┐
-     │                                      │ create_voice_translation()           │
-     │                                      │                                      │
-     │                                      │  Step 1: STT (Speech-to-Text)        │
-     │                                      │  Step 2: Translation                 │
-     │                                      │  Step 3: TTS (Text-to-Speech)        │
-     │                                      └───────────────┬──────────────────────┘
+---
+
+## 번역 프로세스 흐름
+
+### 1. 기본 번역 (컨텍스트 없음)
+
+```
+┌──────────┐     POST /translate/text      ┌─────────────────────────────────┐
+│  Client  │  ────────────────────────────▶│  Controller                     │
+│          │    • source_text              │  translate_text.py              │
+│          │    • source_lang: "en"        └────────────────┬────────────────┘
+│          │    • target_lang: "ko"                         │
+└──────────┘                                                ▼
+     ▲                                     ┌─────────────────────────────────┐
+     │                                     │  Use Case                       │
+     │                                     │  CreateTextTranslationUseCase   │
+     │                                     └────────────────┬────────────────┘
      │                                                      │
      │                                                      ▼
-     │  ┌───────────────────────────────────────────────────────────────────────────┐
-     │  │                    _translation_service.py (핵심 서비스)                   │
-     │  └───────────────────────────────────────────────────────────────────────────┘
-     │                         │                    │                    │
-     │                         ▼                    ▼                    ▼
-     │  ┌─────────────────────────┐  ┌─────────────────────────┐  ┌─────────────────────────┐
-     │  │ speech_to_text()        │  │ translate()             │  │ text_to_speech()        │
-     │  │                         │  │                         │  │                         │
-     │  │ Input:                  │  │ Input:                  │  │ Input:                  │
-     │  │  • audio_data (bytes)   │  │  • text: "Hello"        │  │  • text: "안녕하세요"    │
-     │  │  • language: "en"       │  │  • source: "en"         │  │  • language: "ko"       │
-     │  │                         │  │  • target: "ko"         │  │                         │
-     │  │ Output:                 │  │                         │  │ Output:                 │
-     │  │  • text: "Hello"        │  │ Output:                 │  │  • audio_url            │
-     │  │  • confidence: 0.95     │  │  • "안녕하세요"          │  │  • duration_ms          │
-     │  └────────────┬────────────┘  └────────────┬────────────┘  └────────────┬────────────┘
-     │               │                            │                            │
-     │               ▼                            ▼                            ▼
-     │  ┌───────────────────────────────────────────────────────────────────────────┐
-     │  │                         External Providers                                │
-     │  │  ┌─────────────────────────────────────────────────────────────────────┐  │
-     │  │  │                    src/external/ 모듈 구조                           │  │
-     │  │  │                                                                     │  │
-     │  │  │  ┌──────────────┐   ┌──────────────┐   ┌──────────────────────────┐ │  │
-     │  │  │  │   speech/    │   │ translation/ │   │       storage/           │ │  │
-     │  │  │  │              │   │              │   │                          │ │  │
-     │  │  │  │ Google STT   │   │ Google       │   │  Supabase Storage        │ │  │
-     │  │  │  │ Google TTS   │   │ Translation  │   │  (profiles 버킷)          │ │  │
-     │  │  │  │              │   │ v3 API       │   │                          │ │  │
-     │  │  │  └──────┬───────┘   └──────┬───────┘   └────────────┬─────────────┘ │  │
-     │  │  └─────────┼──────────────────┼────────────────────────┼───────────────┘  │
-     │  └────────────┼──────────────────┼────────────────────────┼─────────────────┘
-     │               │                  │                        │
-     │               ▼                  ▼                        ▼
-     │  ┌───────────────────────────────────────────────────────────────────────────┐
-     │  │                         Google Cloud Platform                             │
-     │  │  ┌─────────────────┐  ┌─────────────────┐                                 │
-     │  │  │ Speech-to-Text  │  │ Translation     │        ┌─────────────────────┐  │
-     │  │  │ API             │  │ API v3          │        │ Supabase            │  │
-     │  │  │                 │  │                 │        │ Storage             │  │
-     │  │  │ "Hello" ◀──────┐│  │ "Hello"         │        │                     │  │
-     │  │  │                ││  │    ↓            │        │ tts/{uuid}.mp3      │  │
-     │  │  │ [Audio WAV]────┘│  │ "안녕하세요"     │        │         ↓           │  │
-     │  │  │                 │  │                 │        │  Public URL 반환    │  │
-     │  │  └─────────────────┘  └─────────────────┘        └─────────────────────┘  │
-     │  └───────────────────────────────────────────────────────────────────────────┘
-     │
-     │  ┌───────────────────────────────────────────────────────────────────────────┐
-     │  │                              Response                                     │
-     │  │  {                                                                        │
-     │  │    "originalText": "Hello",                                               │
-     │  │    "translatedText": "안녕하세요",                                          │
-     │  │    "sourceLang": "en",                                                    │
-     │  │    "targetLang": "ko",                                                    │
-     │  │    "audioUrl": "https://xxx.supabase.co/storage/v1/.../tts/uuid.mp3",     │
-     │  │    "audioDurationMs": 1500                                                │
-     │  │  }                                                                        │
-     └──└───────────────────────────────────────────────────────────────────────────┘
+     │                                     ┌─────────────────────────────────┐
+     │                                     │  Google Translation API v3     │
+     │                                     │  (context 없음)                 │
+     │                                     └────────────────┬────────────────┘
+     │                                                      │
+     │  ┌───────────────────────────────────────────────────┘
+     │  │  Response: { translated_text: "안녕하세요" }
+     └──┘
 ```
 
-## 디렉토리 구조
+### 2. 컨텍스트 기반 AI 번역 (Vertex AI)
 
 ```
-src/
-├── modules/
-│   └── translations/
-│       ├── translate_voice.py        # API 엔드포인트
-│       └── _translation_service.py   # 핵심 비즈니스 로직
-│
-└── external/
-    ├── speech/
-    │   ├── __init__.py               # get_speech_provider()
-    │   ├── base.py                   # ISpeechProvider 인터페이스
-    │   └── google_provider.py        # Google Cloud STT/TTS 구현
-    │
-    ├── translation/
-    │   ├── __init__.py               # get_translation_provider()
-    │   ├── base.py                   # ITranslationProvider 인터페이스
-    │   └── google_provider.py        # Google Cloud Translation 구현
-    │
-    └── storage/
-        ├── __init__.py               # get_storage_provider()
-        ├── base.py                   # IStorageProvider 인터페이스
-        └── supabase_provider.py      # Supabase Storage 구현
+┌──────────┐     POST /translate/voice     ┌─────────────────────────────────┐
+│  Client  │  ────────────────────────────▶│  Controller                     │
+│          │    • audio_file               │  translate_voice.py             │
+│          │    • source_lang: "en"        └────────────────┬────────────────┘
+│          │    • target_lang: "ko"                         │
+│          │    • context_primary: "FD6"                    │
+│          │    • context_sub: "ordering"                   │
+└──────────┘                                                ▼
+     ▲                                     ┌─────────────────────────────────┐
+     │                                     │  Use Case                       │
+     │                                     │  CreateVoiceTranslationUseCase  │
+     │                                     └────────────────┬────────────────┘
+     │                                                      │
+     │                        ┌─────────────────────────────┼─────────────────────────────┐
+     │                        │                             │                             │
+     │                        ▼                             ▼                             ▼
+     │           ┌────────────────────┐      ┌────────────────────┐      ┌────────────────────┐
+     │           │ Step 1: STT        │      │ Step 2: Context    │      │ Step 3: Translate  │
+     │           │ Google Speech API  │      │ _context_service   │      │ Vertex AI (Gemini) │
+     │           │                    │      │                    │      │                    │
+     │           │ audio → "Hello"    │      │ 카테고리 조회       │      │ 컨텍스트 + 원문    │
+     │           └────────────────────┘      │ 프롬프트 빌드       │      │      ↓             │
+     │                                       └────────────────────┘      │ 자연스러운 번역    │
+     │                                                                   └────────────────────┘
+     │                                                      │
+     │                                                      ▼
+     │                                       ┌────────────────────┐
+     │                                       │ Step 4: TTS        │
+     │                                       │ Google TTS API     │
+     │                                       │                    │
+     │                                       │ 번역문 → MP3       │
+     │                                       └────────────────────┘
+     │                                                      │
+     │  ┌───────────────────────────────────────────────────┘
+     │  │  Response: { translated_text, audio_url, ... }
+     └──┘
 ```
 
-## Provider 선택 로직 (Strategy Pattern)
+---
+
+## 컨텍스트 프롬프트 빌드
+
+### 프롬프트 구성 요소
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         컨텍스트 프롬프트 구조                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  1. 사용자 상황 설명 (자동 생성)                                              │
+│     ────────────────────────────────────────────────                        │
+│     "이 사용자는 음식점에서 주문을(를) 원합니다."                              │
+│                                                                             │
+│  2. 카테고리별 프롬프트 (DB 저장)                                             │
+│     ────────────────────────────────────────────────                        │
+│     "음식점 주문 상황입니다. 메뉴, 수량, 요청사항 관련                         │
+│      표현을 자연스럽게 번역해주세요."                                          │
+│                                                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  최종 프롬프트 예시:                                                          │
+│  ─────────────────                                                          │
+│  "이 사용자는 음식점에서 주문을(를) 원합니다.                                  │
+│   음식점 주문 상황입니다. 메뉴, 수량, 요청사항 관련 표현을                      │
+│   자연스럽게 번역해주세요."                                                   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### _context_service.py 흐름
+
+```python
+def build_translation_context(session, primary_code, sub_code, target_lang):
+    # 1. 카테고리 이름 조회
+    primary_name = "음식점"   # from DB (FD6 → 음식점)
+    sub_name = "주문"         # from DB (ordering → 주문)
+
+    # 2. 사용자 상황 설명 생성
+    situation = f"이 사용자는 {primary_name}에서 {sub_name}을(를) 원합니다."
+
+    # 3. 카테고리별 프롬프트 조회
+    category_prompt = get_context_prompt(session, primary_code, sub_code)
+
+    # 4. 전체 컨텍스트 조합
+    return f"{situation}\n{category_prompt}"
+```
+
+---
+
+## Provider 선택 로직
 
 ```
                     ┌─────────────────────────────────────┐
-                    │       get_speech_provider()         │
-                    │       get_translation_provider()    │
+                    │       _translation_service.py       │
+                    │            translate()              │
                     └─────────────────┬───────────────────┘
                                       │
                     ┌─────────────────┴───────────────────┐
                     │                                     │
                     ▼                                     ▼
     ┌───────────────────────────────┐    ┌───────────────────────────────┐
-    │  Credentials 있음              │    │  Credentials 없음              │
-    │  (GOOGLE_CLOUD_PROJECT +      │    │                               │
-    │   GOOGLE_CREDENTIALS_JSON)    │    │                               │
+    │  context 있음                  │    │  context 없음                  │
     └───────────────┬───────────────┘    └───────────────┬───────────────┘
                     │                                     │
                     ▼                                     ▼
     ┌───────────────────────────────┐    ┌───────────────────────────────┐
-    │  GoogleSpeechProvider         │    │  Mock Response (Fallback)     │
-    │  GoogleTranslationProvider    │    │                               │
-    │                               │    │  "en" → "Hello"               │
-    │  실제 API 호출                 │    │  "ko" → "안녕하세요"            │
+    │  Vertex AI (Gemini 1.5 Flash) │    │  Google Translation API v3   │
+    │                               │    │                               │
+    │  • 컨텍스트 기반 번역          │    │  • 단순 번역                   │
+    │  • 자연스러운 표현             │    │  • 빠른 속도                   │
+    │  • 상황 맞춤 어휘              │    │  • 저렴한 비용                 │
     └───────────────────────────────┘    └───────────────────────────────┘
 ```
 
-### Provider 인터페이스
+---
 
-**ISpeechProvider** (`src/external/speech/base.py`)
-```python
-class ISpeechProvider(ABC):
-    @abstractmethod
-    def speech_to_text(self, audio_data: bytes, language: str) -> dict:
-        """음성 → 텍스트 변환"""
-        pass
+## 카테고리 시스템
 
-    @abstractmethod
-    def text_to_speech(self, text: str, language: str) -> dict:
-        """텍스트 → 음성 변환"""
-        pass
+### 1차 카테고리 (장소 유형)
+
+| code | name_ko | name_en |
+|------|---------|---------|
+| FD6 | 음식점 | Restaurant |
+| CE7 | 카페 | Cafe |
+| HP8 | 병원 | Hospital |
+| PM9 | 약국 | Pharmacy |
+| MT1 | 대형마트 | Mart |
+| CS2 | 편의점 | Convenience Store |
+| BK9 | 은행 | Bank |
+| SW8 | 지하철역 | Subway |
+| AD5 | 숙박 | Hotel |
+| AT4 | 관광명소 | Attraction |
+| GEN | 일반 | General |
+
+### 2차 카테고리 (상황/의도)
+
+| code | name_ko | name_en |
+|------|---------|---------|
+| ordering | 주문 | Ordering |
+| payment | 결제 | Payment |
+| complaint | 불만 | Complaint |
+| reservation | 예약 | Reservation |
+| reception | 접수 | Reception |
+| symptom_explain | 증상설명 | Symptom Explanation |
+| buy_medicine | 약구매 | Buy Medicine |
+| find_item | 물건찾기 | Find Item |
+| exchange_refund | 교환/환불 | Exchange/Refund |
+| inquiry | 문의 | Inquiry |
+| other | 기타 | Other |
+
+### 카테고리 매핑
+
+```
+FD6 (음식점)    → ordering, payment, complaint, reservation, inquiry, other
+CE7 (카페)      → ordering, payment, complaint, inquiry, other
+HP8 (병원)      → reception, symptom_explain, payment, inquiry, other
+PM9 (약국)      → symptom_explain, buy_medicine, payment, inquiry, other
+MT1 (대형마트)  → find_item, payment, exchange_refund, inquiry, other
+CS2 (편의점)    → find_item, payment, exchange_refund, inquiry, other
+BK9 (은행)      → inquiry, other
+SW8 (지하철역)  → inquiry, other
+AD5 (숙박)      → reservation, payment, inquiry, other
+AT4 (관광명소)  → inquiry, other
+GEN (일반)      → inquiry, other
 ```
 
-**ITranslationProvider** (`src/external/translation/base.py`)
-```python
-class ITranslationProvider(ABC):
-    @abstractmethod
-    def translate(self, text: str, source_lang: str, target_lang: str) -> str:
-        """텍스트 번역"""
-        pass
-```
+---
 
-## 인증 흐름 (Credentials)
+## 스레드 기반 대화 관리
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              config.py                                      │
-│  ┌────────────────────────────────────────────────────────────────────────┐ │
-│  │  GOOGLE_CLOUD_PROJECT: str | None      # 프로젝트 ID                   │ │
-│  │  GOOGLE_CREDENTIALS_JSON: str | None   # JSON 문자열 (서버용)          │ │
-│  └────────────────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-                                      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         _get_credentials()                                  │
+│                            Translation Thread                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  id: UUID                                                                   │
+│  profile_id: UUID (사용자)                                                  │
+│  primary_category: "FD6" (음식점)                                           │
+│  sub_category: "ordering" (주문)                                            │
+│  created_at: datetime                                                       │
+│  deleted_at: datetime (soft delete)                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│   if GOOGLE_CREDENTIALS_JSON:                                               │
-│       ─────────────────────────────▶  JSON 파싱 → Credentials 객체          │
-│                                       (Render 서버 환경)                     │
-│   else:                                                                     │
-│       ─────────────────────────────▶  None 반환 → ADC 사용                   │
-│                                       (로컬 개발 환경)                        │
+│  Translations (연결된 번역 기록들)                                           │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │ [1] "I'd like to order bulgogi" → "불고기 주문하고 싶어요"              │ │
+│  │ [2] "Two servings please" → "2인분 주세요"                             │ │
+│  │ [3] "Can I get more side dishes?" → "반찬 더 주실 수 있나요?"          │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 환경별 인증 방식
+---
 
-| 환경 | 인증 방식 | 설정 |
-|------|----------|------|
-| 로컬 개발 | ADC (Application Default Credentials) | `gcloud auth application-default login` |
-| Render 서버 | JSON 문자열 | `GOOGLE_CREDENTIALS_JSON` 환경변수 |
+## API 엔드포인트
 
-## Supabase Storage 구조
+### 번역 API
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/translate/text` | 텍스트 번역 |
+| POST | `/translate/voice` | 음성 번역 (STT → 번역 → TTS) |
+| GET | `/translations` | 번역 기록 목록 |
+| DELETE | `/translations/{id}` | 번역 기록 삭제 |
+
+### 스레드 API
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/translation/threads` | 스레드 생성 |
+| GET | `/translation/threads` | 스레드 목록 |
+| GET | `/translation/threads/{id}` | 스레드 상세 (번역 기록 포함) |
+| DELETE | `/translation/threads/{id}` | 스레드 삭제 (soft delete) |
+
+### 카테고리 API
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/translation/categories` | 카테고리 목록 + 매핑 |
+
+---
+
+## 디렉토리 구조
 
 ```
-Supabase Project: kkachie (cuihfzfmyhczgnsfauud)
-│
-└── Storage
-    │
-    └── Bucket: profiles (public: true)
-        │
-        └── tts/
-            ├── {uuid1}.mp3   ◀── TTS 결과 오디오 파일
-            ├── {uuid2}.mp3
-            └── ...
+src/modules/translations/
+├── __init__.py                 # 라우터 등록
+├── translate_text.py           # POST /translate/text
+├── translate_voice.py          # POST /translate/voice
+├── list.py                     # GET /translations
+├── delete.py                   # DELETE /translations/{id}
+├── threads_create.py           # POST /translation/threads
+├── threads_list.py             # GET /translation/threads
+├── threads_detail.py           # GET /translation/threads/{id}
+├── threads_delete.py           # DELETE /translation/threads/{id}
+├── categories_list.py          # GET /translation/categories
+├── _use_cases.py               # Use Cases (비즈니스 로직)
+├── _models.py                  # Domain Models
+├── _repository.py              # DB 접근
+├── _exceptions.py              # Domain Exceptions
+├── _context_service.py         # 컨텍스트 프롬프트 빌드
+└── _translation_service.py     # 외부 API 호출
+
+src/external/translation/
+├── __init__.py                 # get_translation_provider(), get_vertex_provider()
+├── base.py                     # ITranslationProvider 인터페이스
+├── google_provider.py          # Google Translation API v3
+└── vertex_provider.py          # Vertex AI (Gemini) - 컨텍스트 번역
 ```
 
-### RLS Policies (storage.objects)
+---
 
-| Policy Name | Command | Role / Condition |
-|-------------|---------|------------------|
-| Allow service role uploads | INSERT | service_role |
-| Allow service role downloads | SELECT | service_role |
-| Allow public downloads | SELECT | public |
-| Allow anon uploads to tts | INSERT | anon (tts 폴더만) |
-| Allow authenticated uploads | INSERT | authenticated |
+## 환경 변수
 
-## 언어 코드 정규화
-
-### Speech API (BCP-47 형식)
-
-```python
-LANGUAGE_MAP = {
-    "en": "en-US",
-    "ko": "ko-KR",
-    "ja": "ja-JP",
-    "zh": "zh-CN",
-    "es": "es-ES",
-    "fr": "fr-FR",
-    "de": "de-DE",
-}
-```
-
-### Translation API (ISO 639-1 형식)
-
-```python
-# BCP-47 → ISO 639-1 변환
-"en-US" → "en"
-"ko-KR" → "ko"
-```
-
-## API 스펙
-
-### Request
-
-```http
-POST /translate/voice
-Content-Type: multipart/form-data
-
-audio_file: <WAV 파일>
-sourceLang: "en"
-targetLang: "ko"
-```
-
-### Response
-
-```json
-{
-  "originalText": "Hello",
-  "translatedText": "안녕하세요",
-  "sourceLang": "en",
-  "targetLang": "ko",
-  "audioUrl": "https://cuihfzfmyhczgnsfauud.supabase.co/storage/v1/object/public/profiles/tts/abc123.mp3",
-  "audioDurationMs": 1500
-}
-```
-
-## 오디오 형식 지원
-
-### STT (Speech-to-Text)
-
-- **지원 형식**: WAV, MP3, FLAC, OGG
-- **인코딩**: 자동 감지 (`ENCODING_UNSPECIFIED`)
-- **샘플레이트**: WAV 헤더에서 자동 감지
-- **채널**: 모노/스테레오 모두 지원 (`audio_channel_count=2`)
-
-### TTS (Text-to-Speech)
-
-- **출력 형식**: MP3
-- **음성 성별**: NEUTRAL (기본)
-
-## 에러 처리
-
-| 에러 | 원인 | 해결 |
+| 변수 | 설명 | 필수 |
 |------|------|------|
-| `DefaultCredentialsError` | 인증 정보 없음 | `GOOGLE_CREDENTIALS_JSON` 설정 |
-| `InvalidArgument: sample_rate_hertz` | 샘플레이트 불일치 | 자동 감지 사용 (파라미터 제거) |
-| `InvalidArgument: Must use single channel` | 스테레오 오디오 | `audio_channel_count=2` 설정 |
-| `StorageApiError: Bucket not found` | 버킷 없음 | Supabase에서 버킷 생성 |
-| `StorageApiError: row-level security policy` | RLS 정책 없음 | Storage RLS 정책 추가 |
+| `GOOGLE_CLOUD_PROJECT` | GCP 프로젝트 ID | Yes |
+| `GOOGLE_CREDENTIALS_JSON` | 서비스 계정 JSON (서버용) | Yes (서버) |
+| `SUPABASE_URL` | Supabase 프로젝트 URL | Yes |
+| `SUPABASE_SERVICE_KEY` | Supabase 서비스 키 | Yes |
+
+---
 
 ## 의존성
 
 ```toml
 # pyproject.toml
-google-cloud-speech = "^2.x"
-google-cloud-translate = "^3.x"
-google-cloud-texttospeech = "^2.x"
-supabase = "^2.x"
+google-cloud-aiplatform = ">=1.38.0"   # Vertex AI (Gemini)
+google-cloud-speech = ">=2.36.0"       # STT
+google-cloud-texttospeech = ">=2.34.0" # TTS
+google-cloud-translate = ">=3.24.0"    # Translation API
+supabase = ">=2.0.0"                   # Storage
 ```
