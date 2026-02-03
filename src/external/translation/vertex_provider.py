@@ -24,12 +24,12 @@ def _get_credentials() -> service_account.Credentials | None:
 class VertexTranslationProvider(ITranslationProvider):
     """Vertex AI (Gemini) 기반 컨텍스트 번역 공급자"""
 
-    def __init__(self, project_id: str, location: str = "asia-northeast3") -> None:
+    def __init__(self, project_id: str, location: str = "us-central1") -> None:
         """Vertex AI 클라이언트 초기화
 
         Args:
             project_id: Google Cloud 프로젝트 ID
-            location: Vertex AI 리전 (기본: 서울)
+            location: Vertex AI 리전 (기본: us-central1, Gemini 모델 가용성 최적)
         """
         import vertexai
 
@@ -39,7 +39,7 @@ class VertexTranslationProvider(ITranslationProvider):
             location=location,
             credentials=credentials,
         )
-        self._model = GenerativeModel("gemini-1.5-flash-002")
+        self._model = GenerativeModel("gemini-2.0-flash-lite-001")
 
     def translate(self, text: str, source_lang: str, target_lang: str) -> str:
         """기본 번역 (컨텍스트 없음)
