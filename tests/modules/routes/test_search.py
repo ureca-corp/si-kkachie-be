@@ -11,7 +11,7 @@ SPEC 기반 테스트 케이스:
 - TC-R-103: 경유지 초과
 """
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi.testclient import TestClient
 
@@ -28,11 +28,9 @@ class TestSearchRoute:
         route_search_request: dict,
     ) -> None:
         """TC-R-001: 기본 경로 검색 성공"""
-        with patch(
-            "src.modules.routes.search.get_directions",
-            new_callable=AsyncMock,
-        ) as mock_naver:
-            mock_naver.return_value = {
+        mock_provider = MagicMock()
+        mock_provider.directions = AsyncMock(
+            return_value={
                 "total_distance_m": 12500,
                 "total_duration_s": 1800,
                 "path": [
@@ -41,7 +39,12 @@ class TestSearchRoute:
                     [127.0276, 37.4979],
                 ],
             }
+        )
 
+        with patch(
+            "src.modules.routes.search.get_kakao_provider",
+            return_value=mock_provider,
+        ):
             response = auth_client.post("/routes/search", json=route_search_request)
 
         assert response.status_code == 200
@@ -64,11 +67,9 @@ class TestSearchRoute:
         route_search_with_waypoints_request: dict,
     ) -> None:
         """TC-R-002: 경유지 포함 검색 성공"""
-        with patch(
-            "src.modules.routes.search.get_directions",
-            new_callable=AsyncMock,
-        ) as mock_naver:
-            mock_naver.return_value = {
+        mock_provider = MagicMock()
+        mock_provider.directions = AsyncMock(
+            return_value={
                 "total_distance_m": 15000,
                 "total_duration_s": 2400,
                 "path": [
@@ -77,7 +78,12 @@ class TestSearchRoute:
                     [127.0276, 37.4979],
                 ],
             }
+        )
 
+        with patch(
+            "src.modules.routes.search.get_kakao_provider",
+            return_value=mock_provider,
+        ):
             response = auth_client.post(
                 "/routes/search", json=route_search_with_waypoints_request
             )
@@ -95,11 +101,9 @@ class TestSearchRoute:
         """TC-R-003: 옵션 변경 검색 성공"""
         route_search_request["option"] = "trafast"  # 빠른길
 
-        with patch(
-            "src.modules.routes.search.get_directions",
-            new_callable=AsyncMock,
-        ) as mock_naver:
-            mock_naver.return_value = {
+        mock_provider = MagicMock()
+        mock_provider.directions = AsyncMock(
+            return_value={
                 "total_distance_m": 14000,  # 거리는 더 길지만
                 "total_duration_s": 1500,  # 시간은 더 짧음
                 "path": [
@@ -107,7 +111,12 @@ class TestSearchRoute:
                     [127.0276, 37.4979],
                 ],
             }
+        )
 
+        with patch(
+            "src.modules.routes.search.get_kakao_provider",
+            return_value=mock_provider,
+        ):
             response = auth_client.post("/routes/search", json=route_search_request)
 
         assert response.status_code == 200
@@ -121,12 +130,13 @@ class TestSearchRoute:
         route_search_request: dict,
     ) -> None:
         """TC-R-101: 경로 없음 -> 404"""
-        with patch(
-            "src.modules.routes.search.get_directions",
-            new_callable=AsyncMock,
-        ) as mock_naver:
-            mock_naver.side_effect = Exception("Route not found")
+        mock_provider = MagicMock()
+        mock_provider.directions = AsyncMock(side_effect=Exception("Route not found"))
 
+        with patch(
+            "src.modules.routes.search.get_kakao_provider",
+            return_value=mock_provider,
+        ):
             response = auth_client.post("/routes/search", json=route_search_request)
 
         assert response.status_code == 404

@@ -6,7 +6,7 @@ GET /locations/search
 - TC-L-007: 현재 위치 포함 검색 (거리 계산)
 """
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi.testclient import TestClient
 
@@ -23,12 +23,13 @@ class TestPlaceSearch:
         place_search_response: dict,
     ) -> None:
         """TC-L-005: 장소 검색 성공"""
-        with patch(
-            "src.modules.locations.search.naver_provider.search_places",
-            new_callable=AsyncMock,
-        ) as mock_api:
-            mock_api.return_value = place_search_response
+        mock_provider = MagicMock()
+        mock_provider.search_places = AsyncMock(return_value=place_search_response)
 
+        with patch(
+            "src.modules.locations.search.get_naver_provider",
+            return_value=mock_provider,
+        ):
             response = auth_client.get(
                 "/locations/search",
                 params={"query": "강남역"},
@@ -55,12 +56,13 @@ class TestPlaceSearch:
         place_search_empty_response: dict,
     ) -> None:
         """TC-L-006: 검색 결과 없음"""
-        with patch(
-            "src.modules.locations.search.naver_provider.search_places",
-            new_callable=AsyncMock,
-        ) as mock_api:
-            mock_api.return_value = place_search_empty_response
+        mock_provider = MagicMock()
+        mock_provider.search_places = AsyncMock(return_value=place_search_empty_response)
 
+        with patch(
+            "src.modules.locations.search.get_naver_provider",
+            return_value=mock_provider,
+        ):
             response = auth_client.get(
                 "/locations/search",
                 params={"query": "존재하지않는장소12345"},
@@ -78,12 +80,13 @@ class TestPlaceSearch:
         place_search_response: dict,
     ) -> None:
         """TC-L-007: 현재 위치 포함 검색 (거리 계산)"""
-        with patch(
-            "src.modules.locations.search.naver_provider.search_places",
-            new_callable=AsyncMock,
-        ) as mock_api:
-            mock_api.return_value = place_search_response
+        mock_provider = MagicMock()
+        mock_provider.search_places = AsyncMock(return_value=place_search_response)
 
+        with patch(
+            "src.modules.locations.search.get_naver_provider",
+            return_value=mock_provider,
+        ):
             # 거리 계산 모킹 (PostGIS 없는 SQLite에서도 동작)
             with patch(
                 "src.modules.locations.search.calculate_distance"
@@ -138,12 +141,13 @@ class TestPlaceSearch:
         test_profile: Profile,
     ) -> None:
         """외부 서비스 오류"""
-        with patch(
-            "src.modules.locations.search.naver_provider.search_places",
-            new_callable=AsyncMock,
-        ) as mock_api:
-            mock_api.side_effect = Exception("API 오류")
+        mock_provider = MagicMock()
+        mock_provider.search_places = AsyncMock(side_effect=Exception("API 오류"))
 
+        with patch(
+            "src.modules.locations.search.get_naver_provider",
+            return_value=mock_provider,
+        ):
             response = auth_client.get(
                 "/locations/search",
                 params={"query": "강남역"},

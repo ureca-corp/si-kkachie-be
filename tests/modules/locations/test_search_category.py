@@ -6,7 +6,7 @@ GET /locations/search/category
 - TC-L-010: 페이지네이션
 """
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi.testclient import TestClient
 
@@ -23,12 +23,15 @@ class TestPlaceCategorySearch:
         category_search_response: dict,
     ) -> None:
         """TC-L-008: 카테고리별 장소 검색 성공"""
-        with patch(
-            "src.modules.locations.search_category.kakao_provider.search_by_category",
-            new_callable=AsyncMock,
-        ) as mock_api:
-            mock_api.return_value = category_search_response
+        mock_provider = MagicMock()
+        mock_provider.search_by_category = AsyncMock(
+            return_value=category_search_response
+        )
 
+        with patch(
+            "src.modules.locations.search_category.get_kakao_provider",
+            return_value=mock_provider,
+        ):
             response = auth_client.get(
                 "/locations/search/category",
                 params={
@@ -63,12 +66,15 @@ class TestPlaceCategorySearch:
         category_search_empty_response: dict,
     ) -> None:
         """TC-L-009: 검색 결과 없음"""
-        with patch(
-            "src.modules.locations.search_category.kakao_provider.search_by_category",
-            new_callable=AsyncMock,
-        ) as mock_api:
-            mock_api.return_value = category_search_empty_response
+        mock_provider = MagicMock()
+        mock_provider.search_by_category = AsyncMock(
+            return_value=category_search_empty_response
+        )
 
+        with patch(
+            "src.modules.locations.search_category.get_kakao_provider",
+            return_value=mock_provider,
+        ):
             response = auth_client.get(
                 "/locations/search/category",
                 params={
@@ -92,12 +98,15 @@ class TestPlaceCategorySearch:
         category_search_response: dict,
     ) -> None:
         """TC-L-010: 페이지네이션"""
-        with patch(
-            "src.modules.locations.search_category.kakao_provider.search_by_category",
-            new_callable=AsyncMock,
-        ) as mock_api:
-            mock_api.return_value = category_search_response
+        mock_provider = MagicMock()
+        mock_provider.search_by_category = AsyncMock(
+            return_value=category_search_response
+        )
 
+        with patch(
+            "src.modules.locations.search_category.get_kakao_provider",
+            return_value=mock_provider,
+        ):
             response = auth_client.get(
                 "/locations/search/category",
                 params={
@@ -114,7 +123,7 @@ class TestPlaceCategorySearch:
         assert data["data"]["page"] == 2
 
         # API 호출 파라미터 확인
-        mock_api.assert_called_once_with(
+        mock_provider.search_by_category.assert_called_once_with(
             category="CE7",
             lng=127.0276,
             lat=37.4979,
@@ -131,12 +140,15 @@ class TestPlaceCategorySearch:
         category_search_response: dict,
     ) -> None:
         """커스텀 반경 설정"""
-        with patch(
-            "src.modules.locations.search_category.kakao_provider.search_by_category",
-            new_callable=AsyncMock,
-        ) as mock_api:
-            mock_api.return_value = category_search_response
+        mock_provider = MagicMock()
+        mock_provider.search_by_category = AsyncMock(
+            return_value=category_search_response
+        )
 
+        with patch(
+            "src.modules.locations.search_category.get_kakao_provider",
+            return_value=mock_provider,
+        ):
             response = auth_client.get(
                 "/locations/search/category",
                 params={
@@ -150,8 +162,8 @@ class TestPlaceCategorySearch:
         assert response.status_code == 200
 
         # 반경 5000m로 호출 확인
-        mock_api.assert_called_once()
-        call_kwargs = mock_api.call_args.kwargs
+        mock_provider.search_by_category.assert_called_once()
+        call_kwargs = mock_provider.search_by_category.call_args.kwargs
         assert call_kwargs["radius"] == 5000
 
     def test_search_category_unauthorized(
@@ -258,12 +270,15 @@ class TestPlaceCategorySearch:
         test_profile: Profile,
     ) -> None:
         """외부 서비스 오류"""
-        with patch(
-            "src.modules.locations.search_category.kakao_provider.search_by_category",
-            new_callable=AsyncMock,
-        ) as mock_api:
-            mock_api.side_effect = Exception("Kakao API 오류")
+        mock_provider = MagicMock()
+        mock_provider.search_by_category = AsyncMock(
+            side_effect=Exception("Kakao API 오류")
+        )
 
+        with patch(
+            "src.modules.locations.search_category.get_kakao_provider",
+            return_value=mock_provider,
+        ):
             response = auth_client.get(
                 "/locations/search/category",
                 params={

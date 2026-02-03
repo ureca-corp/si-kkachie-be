@@ -8,7 +8,7 @@ GET /locations/reverse-geocode
 - TC-L-005: 외부 서비스 오류
 """
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi.testclient import TestClient
 
@@ -25,12 +25,13 @@ class TestReverseGeocode:
         reverse_geocode_response: dict,
     ) -> None:
         """TC-L-001: 좌표 → 주소 변환 성공"""
-        with patch(
-            "src.modules.locations.reverse_geocode.naver_provider.reverse_geocode",
-            new_callable=AsyncMock,
-        ) as mock_api:
-            mock_api.return_value = reverse_geocode_response
+        mock_provider = MagicMock()
+        mock_provider.reverse_geocode = AsyncMock(return_value=reverse_geocode_response)
 
+        with patch(
+            "src.modules.locations.reverse_geocode.get_naver_provider",
+            return_value=mock_provider,
+        ):
             response = auth_client.get(
                 "/locations/reverse-geocode",
                 params={"lat": 37.5665, "lng": 126.9780},
@@ -53,12 +54,15 @@ class TestReverseGeocode:
         reverse_geocode_not_found_response: dict,
     ) -> None:
         """TC-L-002: 좌표에 해당하는 주소 없음"""
-        with patch(
-            "src.modules.locations.reverse_geocode.naver_provider.reverse_geocode",
-            new_callable=AsyncMock,
-        ) as mock_api:
-            mock_api.return_value = reverse_geocode_not_found_response
+        mock_provider = MagicMock()
+        mock_provider.reverse_geocode = AsyncMock(
+            return_value=reverse_geocode_not_found_response
+        )
 
+        with patch(
+            "src.modules.locations.reverse_geocode.get_naver_provider",
+            return_value=mock_provider,
+        ):
             response = auth_client.get(
                 "/locations/reverse-geocode",
                 params={"lat": 0.0, "lng": 0.0},  # 바다 한가운데
@@ -101,12 +105,13 @@ class TestReverseGeocode:
         test_profile: Profile,
     ) -> None:
         """TC-L-005: 외부 서비스 오류"""
-        with patch(
-            "src.modules.locations.reverse_geocode.naver_provider.reverse_geocode",
-            new_callable=AsyncMock,
-        ) as mock_api:
-            mock_api.side_effect = Exception("API 오류")
+        mock_provider = MagicMock()
+        mock_provider.reverse_geocode = AsyncMock(side_effect=Exception("API 오류"))
 
+        with patch(
+            "src.modules.locations.reverse_geocode.get_naver_provider",
+            return_value=mock_provider,
+        ):
             response = auth_client.get(
                 "/locations/reverse-geocode",
                 params={"lat": 37.5665, "lng": 126.9780},
