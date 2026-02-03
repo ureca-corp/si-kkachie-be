@@ -62,8 +62,18 @@ def create_thread(
     Raises:
         InvalidCategoryError: 유효하지 않은 카테고리 조합 (400)
     """
-    # Use Case 실행 (비즈니스 로직은 Use Case에서 처리)
-    use_case = CreateThreadUseCase(session)
+    # Repository 인스턴스 생성 (DIP)
+    from ._repository import CategoryRepository, ThreadRepository
+
+    category_repository = CategoryRepository(session)
+    thread_repository = ThreadRepository(session)
+
+    # Use Case 실행
+    use_case = CreateThreadUseCase(
+        session=session,
+        category_repository=category_repository,
+        thread_repository=thread_repository,
+    )
     result = use_case.execute(
         profile_id=profile.id,
         primary_category=body.primary_category,

@@ -67,8 +67,17 @@ def get_thread(
     Raises:
         ThreadNotFoundError: 스레드를 찾을 수 없음 (404)
     """
+    # Repository 인스턴스 생성 (DIP)
+    from ._repository import ThreadRepository, TranslationRepository
+
+    thread_repository = ThreadRepository(session)
+    translation_repository = TranslationRepository(session)
+
     # Use Case 실행
-    use_case = GetThreadUseCase(session)
+    use_case = GetThreadUseCase(
+        thread_repository=thread_repository,
+        translation_repository=translation_repository,
+    )
     result = use_case.execute(thread_id=thread_id, profile_id=profile.id)
 
     # 응답 변환

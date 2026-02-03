@@ -61,8 +61,13 @@ def get_categories(
     session: Session = Depends(get_session),
 ) -> ApiResponse[CategoriesData]:
     """번역 카테고리 목록 조회"""
+    # Repository 인스턴스 생성 (DIP)
+    from ._repository import CategoryRepository
+
+    category_repository = CategoryRepository(session)
+
     # Use Case 실행
-    use_case = GetCategoriesUseCase(session)
+    use_case = GetCategoriesUseCase(category_repository=category_repository)
     result = use_case.execute()
 
     # 응답 변환

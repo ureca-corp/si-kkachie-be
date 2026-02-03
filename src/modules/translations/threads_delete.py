@@ -37,8 +37,13 @@ def delete_thread(
     Raises:
         ThreadNotFoundError: 스레드를 찾을 수 없음 (404)
     """
+    # Repository 인스턴스 생성 (DIP)
+    from ._repository import ThreadRepository
+
+    thread_repository = ThreadRepository(session)
+
     # Use Case 실행 (존재 확인, 소유권 확인, soft delete)
-    use_case = DeleteThreadUseCase(session)
+    use_case = DeleteThreadUseCase(session=session, thread_repository=thread_repository)
     use_case.execute(thread_id=thread_id, profile_id=profile.id)
 
     return ApiResponse(

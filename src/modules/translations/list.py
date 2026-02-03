@@ -14,7 +14,6 @@ from src.core.database import get_session
 from src.core.deps import CurrentProfile
 from src.core.response import ApiResponse, Status
 
-from . import _repository
 from ._models import Translation
 
 router = APIRouter(tags=["translations"])
@@ -64,10 +63,13 @@ def get_translations(
     mission_progress_id: str | None = None,
 ) -> tuple[list[Translation], dict]:
     """번역 히스토리 조회"""
-    mission_id = UUID(mission_progress_id) if mission_progress_id else None
+    # Repository 인스턴스 생성 (DIP)
+    from ._repository import TranslationRepository
 
-    translations, total = _repository.get_by_profile_id(
-        session,
+    mission_id = UUID(mission_progress_id) if mission_progress_id else None
+    translation_repository = TranslationRepository(session)
+
+    translations, total = translation_repository.get_by_profile_id(
         profile_id,
         page=page,
         limit=limit,

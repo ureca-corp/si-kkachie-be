@@ -3,22 +3,33 @@
 클린 아키텍처: Application Layer
 - 비즈니스 로직을 캡슐화
 - Controller에서 분리하여 재사용성 및 테스트 용이성 확보
-- Repository를 통해 데이터 접근 (의존성 주입)
+- Repository/Service는 인터페이스를 통해 주입 (DIP)
 """
+
+from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from sqlmodel import Session
 
-from . import _repository
 from ._exceptions import (
     InvalidCategoryError,
     ThreadAccessDeniedError,
     ThreadNotFoundError,
 )
 from ._models import TranslationThread
+
+if TYPE_CHECKING:
+    from ._interfaces import (
+        ICategoryRepository,
+        IContextService,
+        IThreadRepository,
+        ITranslationRepository,
+        ITranslationService,
+    )
 
 
 def _utcnow() -> datetime:
@@ -41,7 +52,7 @@ class ThreadResult:
     created_at: datetime
 
     @classmethod
-    def from_entity(cls, thread: TranslationThread) -> "ThreadResult":
+    def from_entity(cls, thread: TranslationThread) -> ThreadResult:
         return cls(
             id=thread.id,
             profile_id=thread.profile_id,
@@ -113,19 +124,22 @@ class CategoriesResult:
 
 
 # ─────────────────────────────────────────────────
-# Use Cases
+# Thread Use Cases
 # ─────────────────────────────────────────────────
 
 
 class CreateThreadUseCase:
-    """스레드 생성 Use Case
+    """스레드 생성 Use Case"""
 
-    비즈니스 규칙:
-    - 카테고리 조합이 유효해야 함 (매핑 테이블에 존재)
-    """
-
-    def __init__(self, session: Session):
+    def __init__(
+        self,
+        session: Session,
+        category_repository: ICategoryRepository,
+        thread_repository: IThreadRepository,
+    ) -> None:
         self._session = session
+        self._category_repository = category_repository
+        self._thread_repository = thread_repository
 
     def execute(
         self,
@@ -133,22 +147,10 @@ class CreateThreadUseCase:
         primary_category: str,
         sub_category: str,
     ) -> ThreadResult:
-        """스레드 생성 실행
-
-        Args:
-            profile_id: 프로필 ID
-            primary_category: 1차 카테고리 코드
-            sub_category: 2차 카테고리 코드
-
-        Returns:
-            생성된 스레드 정보
-
-        Raises:
-            InvalidCategoryError: 유효하지 않은 카테고리 조합
-        """
+        """스레드 생성 실행"""
         # 비즈니스 규칙: 카테고리 조합 유효성 검증
-        if not _repository.is_valid_category_mapping(
-            self._session, primary_category, sub_category
+        if not self._category_repository.is_valid_category_mapping(
+            primary_category, sub_category
         ):
             raise InvalidCategoryError()
 
@@ -161,55 +163,39 @@ class CreateThreadUseCase:
             created_at=_utcnow(),
         )
 
-        # 저장
-        thread = _repository.create_thread(self._session, thread)
+        # 저장 및 커밋
+        thread = self._thread_repository.create(thread)
+        self._session.commit()
 
         return ThreadResult.from_entity(thread)
 
 
 class GetThreadUseCase:
-    """스레드 상세 조회 Use Case
+    """스레드 상세 조회 Use Case"""
 
-    비즈니스 규칙:
-    - 스레드가 존재해야 함
-    - 요청자가 스레드 소유자여야 함
-    """
-
-    def __init__(self, session: Session):
-        self._session = session
+    def __init__(
+        self,
+        thread_repository: IThreadRepository,
+        translation_repository: ITranslationRepository,
+    ) -> None:
+        self._thread_repository = thread_repository
+        self._translation_repository = translation_repository
 
     def execute(
         self,
         thread_id: UUID,
         profile_id: UUID,
     ) -> ThreadDetailResult:
-        """스레드 상세 조회 실행
-
-        Args:
-            thread_id: 스레드 ID
-            profile_id: 요청자 프로필 ID
-
-        Returns:
-            스레드 상세 정보 (번역 기록 포함)
-
-        Raises:
-            ThreadNotFoundError: 스레드가 존재하지 않음
-            ThreadAccessDeniedError: 접근 권한 없음
-        """
-        # 스레드 조회
-        thread = _repository.get_thread_by_id(self._session, thread_id)
+        """스레드 상세 조회 실행"""
+        thread = self._thread_repository.get_by_id(thread_id)
 
         if thread is None:
             raise ThreadNotFoundError()
 
-        # 소유권 확인
         if thread.profile_id != profile_id:
             raise ThreadAccessDeniedError()
 
-        # 번역 기록 조회
-        translations, _ = _repository.get_translations_by_thread_id(
-            self._session, thread_id
-        )
+        translations, _ = self._translation_repository.get_by_thread_id(thread_id)
 
         translation_results = [
             TranslationResult(
@@ -245,8 +231,8 @@ class GetThreadUseCase:
 class ListThreadsUseCase:
     """스레드 목록 조회 Use Case"""
 
-    def __init__(self, session: Session):
-        self._session = session
+    def __init__(self, thread_repository: IThreadRepository) -> None:
+        self._thread_repository = thread_repository
 
     def execute(
         self,
@@ -254,18 +240,9 @@ class ListThreadsUseCase:
         page: int = 1,
         limit: int = 20,
     ) -> ThreadListResult:
-        """스레드 목록 조회 실행
-
-        Args:
-            profile_id: 프로필 ID
-            page: 페이지 번호 (1부터 시작)
-            limit: 페이지당 항목 수
-
-        Returns:
-            스레드 목록 및 페이지네이션 정보
-        """
-        threads, total = _repository.get_threads_by_profile_id(
-            self._session, profile_id, page, limit
+        """스레드 목록 조회 실행"""
+        threads, total = self._thread_repository.get_by_profile_id(
+            profile_id, page, limit
         )
 
         items = [ThreadResult.from_entity(t) for t in threads]
@@ -279,73 +256,60 @@ class ListThreadsUseCase:
 
 
 class DeleteThreadUseCase:
-    """스레드 삭제 Use Case (Soft Delete)
+    """스레드 삭제 Use Case (Soft Delete)"""
 
-    비즈니스 규칙:
-    - 스레드가 존재해야 함
-    - 요청자가 스레드 소유자여야 함
-    """
-
-    def __init__(self, session: Session):
+    def __init__(
+        self,
+        session: Session,
+        thread_repository: IThreadRepository,
+    ) -> None:
         self._session = session
+        self._thread_repository = thread_repository
 
     def execute(
         self,
         thread_id: UUID,
         profile_id: UUID,
     ) -> None:
-        """스레드 삭제 실행
-
-        Args:
-            thread_id: 스레드 ID
-            profile_id: 요청자 프로필 ID
-
-        Raises:
-            ThreadNotFoundError: 스레드가 존재하지 않음
-            ThreadAccessDeniedError: 접근 권한 없음
-        """
-        # 스레드 조회
-        thread = _repository.get_thread_by_id(self._session, thread_id)
+        """스레드 삭제 실행"""
+        thread = self._thread_repository.get_by_id(thread_id)
 
         if thread is None:
             raise ThreadNotFoundError()
 
-        # 소유권 확인
         if thread.profile_id != profile_id:
             raise ThreadAccessDeniedError()
 
-        # Soft delete
-        _repository.soft_delete_thread(self._session, thread)
+        self._thread_repository.soft_delete(thread)
+        self._session.commit()
+
+
+# ─────────────────────────────────────────────────
+# Category Use Cases
+# ─────────────────────────────────────────────────
 
 
 class GetCategoriesUseCase:
     """카테고리 목록 조회 Use Case"""
 
-    def __init__(self, session: Session):
-        self._session = session
+    def __init__(self, category_repository: ICategoryRepository) -> None:
+        self._category_repository = category_repository
 
     def execute(self) -> CategoriesResult:
-        """카테고리 목록 조회 실행
-
-        Returns:
-            1차/2차 카테고리 목록 및 매핑 정보
-        """
-        # 1차 카테고리 조회
-        primaries = _repository.get_primary_categories(self._session)
+        """카테고리 목록 조회 실행"""
+        primaries = self._category_repository.get_primary_categories()
         primary_results = [
             CategoryResult(code=p.code, name_ko=p.name_ko, name_en=p.name_en)
             for p in primaries
         ]
 
-        # 2차 카테고리 조회
-        subs = _repository.get_sub_categories(self._session)
+        subs = self._category_repository.get_sub_categories()
         sub_results = [
             CategoryResult(code=s.code, name_ko=s.name_ko, name_en=s.name_en)
             for s in subs
         ]
 
-        # 매핑 조회 및 변환
-        mappings_list = _repository.get_category_mappings(self._session)
+        mappings_list = self._category_repository.get_category_mappings()
         mappings_dict: dict[str, list[str]] = {}
         for m in mappings_list:
             if m.primary_code not in mappings_dict:
@@ -378,57 +342,46 @@ class TextTranslationInput:
     context_sub: str | None = None
 
 
-@dataclass
-class VoiceTranslationInput:
-    """음성 번역 입력 DTO"""
-
-    profile_id: UUID
-    audio_data: bytes
-    source_lang: str
-    target_lang: str
-    mission_progress_id: UUID | None = None
-    thread_id: UUID | None = None
-    context_primary: str | None = None
-    context_sub: str | None = None
-
-
 class CreateTextTranslationUseCase:
-    """텍스트 번역 Use Case
+    """텍스트 번역 Use Case (Vertex AI Gemini)"""
 
-    비즈니스 로직:
-    - 컨텍스트가 있으면 Vertex AI (Gemini) 사용
-    - 컨텍스트가 없으면 Google Translation API 사용
-    """
-
-    def __init__(self, session: Session):
-        self._session = session
-
-    def execute(self, input_data: TextTranslationInput) -> TranslationResult:
-        """텍스트 번역 실행
+    def __init__(
+        self,
+        session: Session,
+        translation_repository: ITranslationRepository,
+        translation_service: ITranslationService,
+        context_service: IContextService,
+    ) -> None:
+        """Use Case 초기화
 
         Args:
-            input_data: 번역 입력 데이터
-
-        Returns:
-            번역 결과 DTO
+            session: DB 세션
+            translation_repository: 번역 기록 Repository (DIP)
+            translation_service: 번역 서비스 (DIP)
+            context_service: 컨텍스트 서비스 (DIP)
         """
+        self._session = session
+        self._translation_repository = translation_repository
+        self._translation_service = translation_service
+        self._context_service = context_service
+
+    def execute(self, input_data: TextTranslationInput) -> TranslationResult:
+        """텍스트 번역 실행"""
         from src.core.enums import TranslationType
 
-        from . import _context_service, _translation_service
         from ._models import Translation
 
         # 컨텍스트 빌드 (카테고리가 있으면)
         context = None
         if input_data.context_primary and input_data.context_sub:
-            context = _context_service.build_translation_context(
-                self._session,
+            context = self._context_service.build_translation_context(
                 input_data.context_primary,
                 input_data.context_sub,
                 input_data.target_lang,
             )
 
         # 번역 수행
-        translated_text = _translation_service.translate(
+        translated_text = self._translation_service.translate(
             input_data.source_text,
             input_data.source_lang,
             input_data.target_lang,
@@ -451,104 +404,9 @@ class CreateTextTranslationUseCase:
             created_at=_utcnow(),
         )
 
-        # 저장
-        translation = _repository.create(self._session, translation)
-
-        return TranslationResult(
-            id=translation.id,
-            profile_id=translation.profile_id,
-            source_text=translation.source_text,
-            translated_text=translation.translated_text,
-            source_lang=translation.source_lang,
-            target_lang=translation.target_lang,
-            translation_type=translation.translation_type,
-            mission_progress_id=translation.mission_progress_id,
-            thread_id=translation.thread_id,
-            context_primary=translation.context_primary,
-            context_sub=translation.context_sub,
-            audio_url=translation.audio_url,
-            duration_ms=translation.duration_ms,
-            confidence_score=translation.confidence_score,
-            created_at=translation.created_at,
-        )
-
-
-class CreateVoiceTranslationUseCase:
-    """음성 번역 Use Case
-
-    비즈니스 로직:
-    - STT → 번역 → TTS 파이프라인
-    - 컨텍스트가 있으면 Vertex AI (Gemini) 사용
-    """
-
-    def __init__(self, session: Session):
-        self._session = session
-
-    def execute(self, input_data: VoiceTranslationInput) -> TranslationResult:
-        """음성 번역 실행
-
-        Args:
-            input_data: 번역 입력 데이터
-
-        Returns:
-            번역 결과 DTO
-        """
-        from src.core.enums import TranslationType
-
-        from . import _context_service, _translation_service
-        from ._models import Translation
-
-        # 1. STT (Speech-to-Text)
-        stt_result = _translation_service.speech_to_text(
-            input_data.audio_data, input_data.source_lang
-        )
-        source_text = stt_result["text"]
-        confidence = stt_result["confidence"]
-
-        # 2. 컨텍스트 빌드 (카테고리가 있으면)
-        context = None
-        if input_data.context_primary and input_data.context_sub:
-            context = _context_service.build_translation_context(
-                self._session,
-                input_data.context_primary,
-                input_data.context_sub,
-                input_data.target_lang,
-            )
-
-        # 3. 번역 (컨텍스트가 있으면 Vertex AI 사용)
-        translated_text = _translation_service.translate(
-            source_text,
-            input_data.source_lang,
-            input_data.target_lang,
-            context,
-        )
-
-        # 4. TTS (Text-to-Speech)
-        tts_result = _translation_service.text_to_speech(
-            translated_text, input_data.target_lang
-        )
-
-        # Entity 생성
-        translation = Translation(
-            id=uuid4(),
-            profile_id=input_data.profile_id,
-            source_text=source_text,
-            translated_text=translated_text,
-            source_lang=input_data.source_lang,
-            target_lang=input_data.target_lang,
-            translation_type=TranslationType.VOICE.value,
-            mission_progress_id=input_data.mission_progress_id,
-            thread_id=input_data.thread_id,
-            context_primary=input_data.context_primary,
-            context_sub=input_data.context_sub,
-            audio_url=tts_result["audio_url"],
-            duration_ms=tts_result["duration_ms"],
-            confidence_score=confidence,
-            created_at=_utcnow(),
-        )
-
-        # 저장
-        translation = _repository.create(self._session, translation)
+        # 저장 및 커밋
+        translation = self._translation_repository.create(translation)
+        self._session.commit()
 
         return TranslationResult(
             id=translation.id,

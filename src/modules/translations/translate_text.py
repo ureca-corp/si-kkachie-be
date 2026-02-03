@@ -2,6 +2,7 @@
 
 텍스트 번역 API
 Controller는 HTTP 처리만 담당, 비즈니스 로직은 Use Case에서 처리
+서비스 인스턴스를 생성하여 Use Case에 주입 (DIP)
 """
 
 from datetime import datetime
@@ -88,8 +89,23 @@ def translate_text(
         context_sub=request.context_sub,
     )
 
+    # Repository/Service 인스턴스 생성 (DIP)
+    from ._context_service import ContextService
+    from ._repository import CategoryRepository, TranslationRepository
+    from ._translation_service import TranslationService
+
+    translation_repository = TranslationRepository(session)
+    category_repository = CategoryRepository(session)
+    translation_service = TranslationService()
+    context_service = ContextService(category_repository)
+
     # Use Case 실행
-    use_case = CreateTextTranslationUseCase(session)
+    use_case = CreateTextTranslationUseCase(
+        session=session,
+        translation_repository=translation_repository,
+        translation_service=translation_service,
+        context_service=context_service,
+    )
     result = use_case.execute(input_data)
 
     # 응답 변환

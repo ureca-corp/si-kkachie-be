@@ -13,8 +13,6 @@ from src.core.deps import CurrentProfile
 from src.core.exceptions import NotFoundError
 from src.core.response import ApiResponse, Status
 
-from . import _repository
-
 router = APIRouter(tags=["translations"])
 
 
@@ -29,12 +27,17 @@ def delete_translation(
     translation_id: UUID,
 ) -> None:
     """번역 기록 삭제 (본인 것만)"""
-    translation = _repository.get_by_id(session, translation_id)
+    # Repository 인스턴스 생성 (DIP)
+    from ._repository import TranslationRepository
+
+    translation_repository = TranslationRepository(session)
+    translation = translation_repository.get_by_id(translation_id)
 
     if not translation or translation.profile_id != profile_id:
         raise NotFoundError("번역 기록을 찾을 수 없어요")
 
-    _repository.delete(session, translation)
+    translation_repository.delete(translation)
+    session.commit()
 
 
 # ─────────────────────────────────────────────────

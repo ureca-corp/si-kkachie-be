@@ -2,7 +2,6 @@
 
 Vertical Slice Architecture:
 - translate_text.py: POST /translate/text
-- translate_voice.py: POST /translate/voice
 - list.py: GET /translations
 - delete.py: DELETE /translations/{id}
 - categories_list.py: GET /translation/categories
@@ -28,12 +27,10 @@ from .threads_delete import router as threads_delete_router
 from .threads_detail import router as threads_detail_router
 from .threads_list import router as threads_list_router
 from .translate_text import router as translate_text_router
-from .translate_voice import router as translate_voice_router
 
 # 모든 라우터 조합
 router = APIRouter()
 router.include_router(translate_text_router)
-router.include_router(translate_voice_router)
 router.include_router(list_router)
 router.include_router(delete_router)
 router.include_router(categories_list_router)

@@ -62,8 +62,13 @@ def list_threads(
     session: Session = Depends(get_session),
 ) -> ApiResponse[ThreadListData]:
     """번역 스레드 목록 조회"""
+    # Repository 인스턴스 생성 (DIP)
+    from ._repository import ThreadRepository
+
+    thread_repository = ThreadRepository(session)
+
     # Use Case 실행
-    use_case = ListThreadsUseCase(session)
+    use_case = ListThreadsUseCase(thread_repository=thread_repository)
     result = use_case.execute(profile_id=profile.id, page=page, limit=limit)
 
     # 응답 변환
