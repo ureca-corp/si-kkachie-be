@@ -2,10 +2,29 @@
 
 ## 시작하기
 
-새 대화 시작 시 **반드시** 순서대로 읽기:
-1. `docs/GUIDELINES.md` - 코드 작성 규칙
-2. `docs/TRD.md` - 기술 아키텍처
-3. `docs/PRD.md` - 프로젝트 목표
+### 범용 코딩 규칙 (항상 적용)
+
+새 대화 시작 시 자동으로 로드되는 **Skill**:
+- `guard` - 모든 코딩 규칙 (Vertical Slice, Provider 패턴, 네이밍, 스타일, TDD, 검증, 보안)
+
+### 새 프로젝트 생성 (project-bootstrap 플러그인)
+
+새 프로젝트/도메인을 생성할 때만 사용:
+
+```
+새 도메인 생성: [간단한 설명]
+```
+
+Claude가 자동으로 **project-bootstrap 플러그인**의 Phase 0-6을 순차 실행합니다.
+
+> **Note**: project-bootstrap은 플러그인으로 분리되어 있어, 필요할 때만 로드됩니다.
+
+### 프로젝트 문서 (참고용)
+
+1. `docs/PRD.md` - 프로젝트 목표
+2. `docs/SPEC.md` - API 스펙 (Phase 3 완료 후 생성)
+
+---
 
 ## 세션 상태 확인
 
@@ -16,21 +35,24 @@
 
 ---
 
-## Phase 순서
+## project-bootstrap 플러그인
 
-사용자가 프로젝트 생성을 요청하면 아래 순서로 Agent 호출:
+새 프로젝트 초기화 전용 플러그인 (Phase 0-6).
+
+### Phase 순서
 
 | Phase | Agent | 역할 | 완료 조건 |
 |-------|-------|------|----------|
-| 0 | `phase-0-clarifier` | 요구사항 명확화 | 모호함 0, SESSION.md 생성 |
-| 1 | `phase-1-researcher` | 외부 라이브러리 리서치 | 기술 스택 선택 완료 |
-| 2 | `phase-2-interviewer` | 도메인 상세 인터뷰 | 모든 도메인 5가지 확정 |
-| 3 | `phase-3-spec-writer` | SPEC.md 작성 | SPEC.md + **DDD Diagram** + 승인 |
-| 4 | `phase-4-generator` | TDD 코드 생성 + 마이그레이션 | 테스트 통과 + DB 적용 |
-| 5 | `phase-5-reviewer` | 코드 검토 | CRITICAL 이슈 0 |
-| 6 | `phase-6-documenter` | API 문서화 | OpenAPI 스펙 검증 완료 |
+| 0 | `project-bootstrap:phase-0-clarifier` | 요구사항 명확화 | SESSION.md 생성 |
+| 1 | `project-bootstrap:phase-1-researcher` | 외부 라이브러리 리서치 | 기술 스택 선택 완료 |
+| 2 | `project-bootstrap:phase-2-interviewer` | 도메인 상세 인터뷰 | 모든 도메인 5가지 확정 |
+| 3 | `project-bootstrap:phase-3-spec-writer` | SPEC.md 작성 | SPEC.md + DDD Diagram + 승인 |
+| 4 | `project-bootstrap:phase-4-generator` | TDD 코드 생성 + 마이그레이션 | 테스트 통과 + DB 적용 |
+| 5 | `project-bootstrap:phase-5-reviewer` | 코드 검토 | CRITICAL 이슈 0 |
+| 6 | `project-bootstrap:phase-6-documenter` | API 문서화 | OpenAPI 스펙 검증 완료 |
 
-**흐름:**
+### 흐름
+
 ```
 사용자 요청
     ↓
@@ -43,10 +65,10 @@ Phase 2: 인터뷰 → 도메인별 5가지 확정
 Phase 3: SPEC 작성 (DDD Diagram 필수) → 사용자 승인
     ↓
 Phase 4: TDD 코드 생성
-    ├─ Step 2: test-code-generator → 테스트 먼저 (FAILED 확인)
-    ├─ Step 3: logic-code-generator → 구현 나중 (PASSED 확인)
-    ├─ Step 4: run-migration → DB 스키마 적용
-    └─ Step 5: verification-loop 6단계 통과
+    ├─ test-code-generator → 테스트 먼저 (FAILED 확인)
+    ├─ logic-code-generator → 구현 나중 (PASSED 확인)
+    ├─ run-migration → DB 스키마 적용
+    └─ verification-loop 6단계 통과
     ↓
 Phase 5: 코드 검토 → CRITICAL 이슈 0
     ↓
@@ -55,14 +77,12 @@ Phase 6: API 문서화 → OpenAPI 스펙 검증 완료
 완료: Git commit
 ```
 
----
-
-## 핵심 원칙
+### 핵심 원칙
 
 1. **Phase 순서 준수** - 건너뛰기 금지
 2. **SESSION.md 즉시 업데이트** - 결정 직후마다
 3. **SPEC.md 없이 코드 생성 금지**
-4. **DDD Class Diagram 필수** - Phase 3 완료 조건 (아래 항목 모두 포함):
+4. **DDD Class Diagram 필수** - Phase 3 완료 조건:
    - PK/FK, NOT NULL, UNIQUE, DEFAULT
    - Enum 정의 (모든 값)
    - Entity 관계 (1:1, 1:N, N:M)
@@ -81,6 +101,57 @@ Phase 6: API 문서화 → OpenAPI 스펙 검증 완료
 
 ---
 
+## 프로젝트 구조
+
+### 범용 규칙 (`.claude/skills/`)
+
+항상 로드되어 모든 코드에 적용:
+
+```
+.claude/skills/
+└── guard/  # 모든 코딩 규칙 (항상 적용)
+```
+
+### 플러그인 (`.claude/plugins/`)
+
+특정 목적으로만 사용:
+
+```
+.claude/plugins/
+└── project-bootstrap/         # 새 프로젝트 생성 (Phase 0-6)
+    ├── agents/                # Phase 전용 Agents
+    │   ├── phase-0-clarifier.md
+    │   ├── phase-1-researcher.md
+    │   ├── phase-2-interviewer.md
+    │   ├── phase-3-spec-writer.md
+    │   ├── phase-4-generator.md
+    │   ├── test-code-generator.md
+    │   ├── logic-code-generator.md
+    │   ├── phase-5-reviewer.md
+    │   ├── phase-6-documenter.md
+    │   └── session-wrapper.md
+    └── skills/                # Phase 전용 Skills
+        ├── clarify/
+        ├── interview-requirements/
+        ├── write-spec/
+        ├── create-module/
+        ├── deep-research/
+        ├── update-session/
+        ├── finalize-implementation/
+        └── run-migration/
+```
+
+### Agents (`.claude/agents/`)
+
+범용 agents:
+
+```
+.claude/agents/
+└── render-autofix.md  # Render 배포 오류 자동 수정 (통합)
+```
+
+---
+
 ## External 모듈
 
 ```
@@ -91,7 +162,7 @@ src/external/
 └── translation/    # 번역 (Papago, OpenAI 등)
 ```
 
-### OpenAPI 스펙 파일 (docs/)
+### OpenAPI 스펙 파일
 
 외부 API 연동 시 `src/external/{api_name}/docs/`에 OpenAPI JSON 스펙 저장:
 
@@ -103,41 +174,6 @@ src/external/
 # 스펙 파일 위치 예시
 src/external/maps/docs/naver-maps-api.json       # Naver Maps API
 src/external/translation/docs/papago-api.json   # Papago 번역 API
-```
-
----
-
-## Agent 위치
-
-```
-.claude/agents/
-├── phase-0-clarifier.md      # 요구사항 명확화
-├── phase-1-researcher.md     # 외부 라이브러리 리서치
-├── phase-2-interviewer.md    # 도메인 상세 인터뷰
-├── phase-3-spec-writer.md    # SPEC.md 작성
-├── phase-4-generator.md      # TDD 오케스트레이터 (test → logic → migration)
-│   ├── test-code-generator.md    # 테스트 코드 생성 (Red)
-│   └── logic-code-generator.md   # 구현 코드 생성 (Green)
-├── phase-5-reviewer.md       # 코드 품질/보안 검토
-├── phase-6-documenter.md     # API 문서화
-└── session-wrapper.md        # 세션 마무리
-```
-
-## Skill 위치
-
-```
-.claude/skills/                        # 디렉토리/SKILL.md 구조
-├── clarify/SKILL.md                   # 요구사항 명확화 (Phase 0)
-├── interview-requirements/SKILL.md    # 도메인 인터뷰 (Phase 2)
-├── write-spec/SKILL.md                # SPEC 작성 (Phase 3)
-├── create-module/SKILL.md             # 모듈 생성 (Phase 4)
-├── tdd-workflow/SKILL.md              # TDD 워크플로우 (Red-Green-Refactor)
-├── run-migration/SKILL.md             # Alembic 마이그레이션 (Phase 4)
-├── verification-loop/SKILL.md         # 6단계 검증 루프
-├── security-review/SKILL.md           # 보안 검토 체크리스트
-├── finalize-implementation/SKILL.md   # 최종 검증
-├── deep-research/SKILL.md             # 심층 기술 리서치
-└── update-session/SKILL.md            # SESSION.md 업데이트
 ```
 
 ---
@@ -163,7 +199,7 @@ uv run alembic current
 **새 모델 추가 시**: `migrations/env.py`에 import 추가 필수
 
 ```python
-from src.modules.{domain}.models import {Model}  # noqa: F401
+from src.modules.{domain}._models import {Model}  # noqa: F401
 ```
 
 ---
@@ -194,16 +230,17 @@ Phase 3 (spec-writer):
   → 사용자 승인
 
 Phase 4 (generator - TDD + Migration):
-  Step 2: test-code-generator
+  test-code-generator:
     - Task(users 테스트) + Task(orders 테스트) 병렬
     - pytest → FAILED 확인 (Gate 1)
-  Step 3: logic-code-generator
+  logic-code-generator:
     - Task(users 구현) + Task(orders 구현) 병렬
     - pytest → PASSED 확인 (Gate 2)
-  Step 4: run-migration
+  run-migration:
     - alembic revision --autogenerate
     - alembic upgrade head (Gate 3)
-  Step 5: verification-loop
+  verification-loop:
+    - Syntax → Style → Type → Guidelines → Test → Security
 
 Phase 5 (reviewer):
   - 코드 품질 검토

@@ -1,0 +1,8 @@
+{
+  "name": "project-bootstrap",
+  "description": "Complete project initialization workflow from requirements gathering to implementation (Phase 0-6). Internal use only - not for public distribution.",
+  "version": "1.0.0",
+  "author": {
+    "name": "si-kkachie-be Team"
+  }
+}

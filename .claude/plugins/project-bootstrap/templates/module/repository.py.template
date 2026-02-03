@@ -1,0 +1,48 @@
+"""
+{DOMAIN} 도메인 - Repository (데이터 접근 계층)
+"""
+
+from typing import Optional
+from uuid import UUID
+
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+from .models import {DOMAIN_TITLE}
+
+
+class {DOMAIN_TITLE}Repository:
+    """
+    {DOMAIN} 데이터 접근 전용
+    
+    비즈니스 로직 금지 - 순수 CRUD만
+    """
+    
+    def __init__(self, session: AsyncSession):
+        self.session = session
+    
+    async def create(self, {DOMAIN}: {DOMAIN_TITLE}) -> {DOMAIN_TITLE}:
+        """생성"""
+        self.session.add({DOMAIN})
+        await self.session.commit()
+        await self.session.refresh({DOMAIN})
+        return {DOMAIN}
+    
+    async def get_by_id(self, {DOMAIN}_id: UUID) -> Optional[{DOMAIN_TITLE}]:
+        """ID로 조회"""
+        return await self.session.get({DOMAIN_TITLE}, {DOMAIN}_id)
+    
+    # SPEC.md 기반 추가 메서드
+    # {ADDITIONAL_METHODS_PLACEHOLDER}
+
+
+# Template 사용법:
+# 1. {DOMAIN} → 도메인명 (users, orders)
+# 2. {DOMAIN_TITLE} → 타이틀 케이스 (User, Order)
+# 3. {ADDITIONAL_METHODS_PLACEHOLDER} → SPEC 기반 추가 메서드
+#
+# 예시 추가 메서드:
+# async def get_by_email(self, email: str) -> Optional[User]:
+#     stmt = select(User).where(User.email == email)
+#     result = await self.session.exec(stmt)
+#     return result.first()
