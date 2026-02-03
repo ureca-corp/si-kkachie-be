@@ -22,6 +22,13 @@ from src.modules.phrases._models import Phrase, PhraseStepMapping  # noqa: F401
 from src.modules.profiles import Profile  # noqa: F401
 from src.modules.routes.models import RouteHistory  # noqa: F401
 from src.modules.translations import Translation  # noqa: F401
+from src.modules.translations._models import (  # noqa: F401
+    TranslationCategoryMapping,
+    TranslationContextPrompt,
+    TranslationPrimaryCategory,
+    TranslationSubCategory,
+    TranslationThread,
+)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
