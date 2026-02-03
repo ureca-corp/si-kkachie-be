@@ -8,6 +8,7 @@ dependencies = [
     "alembic>=1.18.1",
     "fastapi>=0.128.0",
     "geoalchemy2>=0.18.1",
+    "google-cloud-aiplatform>=1.38.0",
     "google-cloud-speech>=2.36.0",
     "google-cloud-texttospeech>=2.34.0",
     "google-cloud-translate>=3.24.0",
