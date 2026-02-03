@@ -39,7 +39,7 @@ class VertexTranslationProvider(ITranslationProvider):
             location=location,
             credentials=credentials,
         )
-        self._model = GenerativeModel("gemini-2.0-flash-lite-001")
+        self._model = GenerativeModel("gemini-1.5-flash-002")
 
     def translate(self, text: str, source_lang: str, target_lang: str) -> str:
         """기본 번역 (컨텍스트 없음)
