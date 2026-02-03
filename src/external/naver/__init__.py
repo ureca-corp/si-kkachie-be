@@ -30,14 +30,16 @@ class NaverProvider(INaverProvider):
         """Naver Provider 초기화
 
         Args:
-            client_id: Naver Cloud Platform API Key ID (None이면 settings에서 가져옴)
-            client_secret: Naver Cloud Platform API Key (None이면 settings에서 가져옴)
-            search_client_id: Naver Developers Client ID (None이면 settings에서 가져옴)
-            search_client_secret: Naver Developers Client Secret (None이면 settings에서 가져옴)
+            client_id: Naver Cloud Platform API Key ID
+            client_secret: Naver Cloud Platform API Key
+            search_client_id: Naver Developers Client ID
+            search_client_secret: Naver Developers Client Secret
         """
         self._client_id = client_id or settings.NAVER_CLIENT_ID or ""
         self._client_secret = client_secret or settings.NAVER_CLIENT_SECRET or ""
-        self._search_client_id = search_client_id or settings.NAVER_SEARCH_CLIENT_ID or ""
+        self._search_client_id = (
+            search_client_id or settings.NAVER_SEARCH_CLIENT_ID or ""
+        )
         self._search_client_secret = (
             search_client_secret or settings.NAVER_SEARCH_CLIENT_SECRET or ""
         )
@@ -91,12 +93,8 @@ def get_naver_provider() -> NaverProvider:
 
 
 __all__ = [
-    # 인터페이스
     "INaverProvider",
-    # Provider 클래스
-    "NaverProvider",
-    # 팩토리 함수
-    "get_naver_provider",
-    # 에러 클래스
     "NaverError",
+    "NaverProvider",
+    "get_naver_provider",
 ]

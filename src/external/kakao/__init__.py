@@ -86,12 +86,8 @@ def get_kakao_provider() -> KakaoProvider:
 
 
 __all__ = [
-    # 인터페이스
     "IKakaoProvider",
-    # Provider 클래스
-    "KakaoProvider",
-    # 팩토리 함수
-    "get_kakao_provider",
-    # 에러 클래스
     "KakaoError",
+    "KakaoProvider",
+    "get_kakao_provider",
 ]

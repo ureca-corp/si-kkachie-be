@@ -56,7 +56,8 @@ class StorageProvider(IStorageProvider):
 
     def get_upload_url(self, key: str, expires_in: int = 3600) -> str:
         try:
-            result = self.client.storage.from_(self.bucket).create_signed_upload_url(key)
+            storage = self.client.storage.from_(self.bucket)
+            result = storage.create_signed_upload_url(key)
             return result["signedURL"]
         except Exception as e:
             raise StorageError(f"Create upload URL failed: {e}") from e
@@ -123,7 +124,8 @@ class AsyncStorageProvider(IAsyncStorageProvider):
     async def get_upload_url(self, key: str, expires_in: int = 3600) -> str:
         try:
             client = await self._get_client()
-            result = await client.storage.from_(self.bucket).create_signed_upload_url(key)
+            storage = client.storage.from_(self.bucket)
+            result = await storage.create_signed_upload_url(key)
             return result["signedURL"]
         except Exception as e:
             raise StorageError(f"Create upload URL failed: {e}") from e
