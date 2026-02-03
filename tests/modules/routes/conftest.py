@@ -8,7 +8,7 @@ from sqlmodel import Session
 
 from src.core.enums import RouteOption
 from src.modules.profiles import Profile
-from src.modules.routes.models import RouteHistory
+from src.modules.routes._models import RouteHistory
 
 
 def _utcnow() -> datetime:
@@ -83,7 +83,7 @@ def route_search_too_many_waypoints_request() -> dict:
 @pytest.fixture
 def created_route_history(session: Session, test_profile: Profile) -> RouteHistory:
     """DB에 저장된 경로 히스토리 (PostGIS GEOGRAPHY 사용)"""
-    from src.modules.routes.models import make_point
+    from src.modules.routes._models import make_point
 
     route = RouteHistory(
         id=uuid4(),

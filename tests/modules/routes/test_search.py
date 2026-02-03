@@ -1,24 +1,21 @@
-"""routes 도메인 컨트롤러 테스트
+"""경로 검색 테스트
+
+POST /routes/search
 
 SPEC 기반 테스트 케이스:
 - TC-R-001: 기본 경로 검색
 - TC-R-002: 경유지 포함 검색
 - TC-R-003: 옵션 변경 검색
-- TC-R-004: 최근 경로 조회
-- TC-R-005: 경로 상세 조회
 - TC-R-101: 경로 없음
 - TC-R-102: 잘못된 좌표
 - TC-R-103: 경유지 초과
-- TC-R-104: 존재하지 않는 경로 상세 조회
 """
 
 from unittest.mock import AsyncMock, patch
 
-import pytest
 from fastapi.testclient import TestClient
 
 from src.modules.profiles import Profile
-from src.modules.routes.models import RouteHistory
 
 
 class TestSearchRoute:
@@ -174,117 +171,4 @@ class TestSearchRoute:
         )
 
         assert response.status_code == 422
-        data = response.json()
         # 경유지 최대 5개 제한
-
-
-class TestRecentRoutes:
-    """GET /routes/recent 테스트"""
-
-    def test_get_recent_routes_success(
-        self,
-        auth_client: TestClient,
-        test_profile: Profile,
-        created_route_history: RouteHistory,
-    ) -> None:
-        """TC-R-004: 최근 경로 조회 성공"""
-        response = auth_client.get("/routes/recent")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["status"] == "SUCCESS"
-        assert data["message"] == "조회에 성공했어요"
-        assert len(data["data"]) >= 1
-
-        route = data["data"][0]
-        assert "id" in route
-        assert "start_name" in route
-        assert "end_name" in route
-        assert "total_distance_m" in route
-        assert "total_duration_s" in route
-        assert "created_at" in route
-
-    def test_get_recent_routes_with_limit(
-        self,
-        auth_client: TestClient,
-        test_profile: Profile,
-        created_route_history: RouteHistory,
-    ) -> None:
-        """limit 파라미터 테스트"""
-        response = auth_client.get("/routes/recent?limit=5")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert len(data["data"]) <= 5
-
-    def test_get_recent_routes_empty(
-        self,
-        auth_client: TestClient,
-        test_profile: Profile,
-    ) -> None:
-        """경로 기록이 없을 때 빈 목록"""
-        response = auth_client.get("/routes/recent")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["data"] == []
-
-    def test_get_recent_routes_max_limit(
-        self,
-        auth_client: TestClient,
-        test_profile: Profile,
-    ) -> None:
-        """limit 최대값 (50) 초과 시"""
-        response = auth_client.get("/routes/recent?limit=100")
-
-        # 최대 50개로 제한되거나 에러
-        assert response.status_code in [200, 422]
-
-
-class TestRouteDetail:
-    """GET /routes/{route_id} 테스트"""
-
-    def test_get_route_detail_success(
-        self,
-        auth_client: TestClient,
-        test_profile: Profile,
-        created_route_history: RouteHistory,
-    ) -> None:
-        """TC-R-005: 경로 상세 조회 성공"""
-        route_id = str(created_route_history.id)
-        response = auth_client.get(f"/routes/{route_id}")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["status"] == "SUCCESS"
-        assert data["message"] == "경로 조회에 성공했어요"
-
-        route = data["data"]
-        assert route["id"] == route_id
-        assert route["start"]["name"] == "서울역"
-        assert route["start"]["lat"] == pytest.approx(37.5547, abs=0.001)
-        assert route["start"]["lng"] == pytest.approx(126.9706, abs=0.001)
-        assert route["end"]["name"] == "강남역"
-        assert route["end"]["lat"] == pytest.approx(37.4979, abs=0.001)
-        assert route["end"]["lng"] == pytest.approx(127.0276, abs=0.001)
-        assert route["total_distance_m"] == 12500
-        assert route["total_duration_s"] == 1800
-        assert "distance_text" in route
-        assert "duration_text" in route
-        assert "path" in route
-        assert len(route["path"]) >= 2
-
-    def test_get_route_detail_not_found(
-        self,
-        auth_client: TestClient,
-        test_profile: Profile,
-    ) -> None:
-        """TC-R-104: 존재하지 않는 경로 -> 404"""
-        from uuid import uuid4
-
-        fake_id = str(uuid4())
-        response = auth_client.get(f"/routes/{fake_id}")
-
-        assert response.status_code == 404
-        data = response.json()
-        assert data["status"] == "RESOURCE_NOT_FOUND"
