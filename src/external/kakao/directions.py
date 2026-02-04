@@ -83,18 +83,19 @@ async def directions(
     except httpx.RequestError as e:
         raise KakaoError(f"Directions API 요청 실패: {e}") from e
 
-    # result_code 확인 (0 = 성공)
-    result_code = data.get("result_code", -1)
-    if result_code != 0:
-        result_msg = data.get("result_msg", "알 수 없는 오류")
-        raise KakaoError(f"[{result_code}] {result_msg}", code=result_code)
-
     # routes 배열 확인
     routes = data.get("routes", [])
     if not routes:
         raise KakaoError("경로 정보가 없습니다", code=-1)
 
     route = routes[0]
+
+    # result_code 확인 (0 = 성공) - routes[0] 내부에 있음
+    result_code = route.get("result_code", -1)
+    if result_code != 0:
+        result_msg = route.get("result_msg", "알 수 없는 오류")
+        raise KakaoError(f"[{result_code}] {result_msg}", code=result_code)
+
     summary = route.get("summary", {})
 
     # path 추출: sections의 roads에서 vertexes 수집
